@@ -2,11 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Models\CheckoutForm;
 use App\Models\Company;
 use App\Models\ProductCategory;
 use Illuminate\Support\Facades\Validator;
 
-class ProductCategoryRepository
+class OrderRepository
 {
     public function index($filters)
     {
@@ -25,34 +26,28 @@ class ProductCategoryRepository
     {
         try {
             $validator = Validator::make($data, [
-                'title' => 'required',
-                'company_id' => 'required',
+                'cf_id' => 'required',
             ]);
-            if ($validator->fails()) return resultFunction('Err PCR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err OR-S: validation err ' . $validator->errors());
 
-            $company = Company::find($data['company_id']);
-            if (!$company) return resultFunction('Err PCR-S: company not found');
+            $cf = CheckoutForm::find($data['df_id']);
+            if (!$cf) return resultFunction('Err OR-S: checkout form not found');
 
-            $productCategory = new ProductCategory();
-            $productCategory->title = $data['title'];
-            $productCategory->company_id = $data['company_id'];
-            $productCategory->save();
-
-            return resultFunction("Success to create category", true, $productCategory);
+            return resultFunction("Success to create order", true);
         } catch (\Exception $e) {
-            return resultFunction("Err code PCR-S catch: " . $e->getMessage());
+            return resultFunction("Err code OR-S catch: " . $e->getMessage());
         }
     }
 
     public function delete($id) {
         try {
             $productCategory =  ProductCategory::find($id);
-            if (!$productCategory) return resultFunction('Err PCR-D: product category not found');
+            if (!$productCategory) return resultFunction('Err OR-D: product category not found');
             $productCategory->delete();
 
             return resultFunction("Success to delete category", true);
         } catch (\Exception $e) {
-            return resultFunction("Err code PCR-D catch: " . $e->getMessage());
+            return resultFunction("Err code OR-D catch: " . $e->getMessage());
         }
     }
 }

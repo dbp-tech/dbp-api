@@ -3,31 +3,32 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Repositories\OrderRepository;
 use App\Repositories\ProductCategoryRepository;
 use Illuminate\Http\Request;
 
-class ProductCategoryController extends Controller
+class OrderController extends Controller
 {
-    protected $productCategoryRepo;
+    protected $orderRepo;
 
     public function __construct()
     {
-        $this->productCategoryRepo = new ProductCategoryRepository();
+        $this->orderRepo = new OrderRepository();
     }
 
     public function index(Request $request)
     {
         $filters = $request->only(['title', 'company_id']);
-        return response()->json($this->productCategoryRepo->index($filters));
+        return response()->json($this->orderRepo->index($filters));
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->productCategoryRepo->save($request->all()));
+        return response()->json($this->orderRepo->save($request->all()));
     }
 
     public function delete($id = null)
     {
-        return response()->json($this->productCategoryRepo->delete($id));
+        return response()->json($this->orderRepo->delete($id));
     }
 }
