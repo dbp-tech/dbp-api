@@ -17,4 +17,14 @@ class Product extends Model
     
     protected $table = 'products';
     protected $guarded = [];
+
+    public function product_type_mapping_variants()
+    {
+        return $this->hasMany(ProductTypeMapping::class)->where("entity_type", 'variant');
+    }
+
+    public function product_type_mapping_recipes()
+    {
+        return $this->hasMany(ProductTypeMapping::class)->where("entity_type", 'recipes');
+    }
 }

@@ -18,7 +18,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['title', 'company_id']);
+        $filters = $request->only([]);
         return response()->json($this->orderRepo->index($filters));
     }
 
@@ -30,5 +30,10 @@ class OrderController extends Controller
     public function delete($id = null)
     {
         return response()->json($this->orderRepo->delete($id));
+    }
+
+    public function detail($id = null)
+    {
+        return response()->json($this->orderRepo->detail($id));
     }
 }

@@ -16,7 +16,7 @@ class ProductRepository
 {
     public function index($filters)
     {
-        $product = Product::with([]);
+        $product = Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe']);
         if (!empty($filters['company_id'])) {
             $product = $product->where('company_id', $filters['company_id']);
         }
@@ -34,13 +34,13 @@ class ProductRepository
                 'price' => 'required',
                 'image' => 'required',
             ]);
-            if ($validator->fails()) return resultFunction('Err PR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err code PR-S: validation err ' . $validator->errors());
 
             $company = Company::find($data['company_id']);
-            if (!$company) return resultFunction('Err PR-S: company not found');
+            if (!$company) return resultFunction('Err code PR-S: company not found');
 
             $productCategory = ProductCategory::find($data['category_id']);
-            if (!$productCategory) return resultFunction('Err PR-S: category not found');
+            if (!$productCategory) return resultFunction('Err code PR-S: category not found');
 
             $product = new Product();
             $product->company_id = $data['company_id'];
@@ -79,7 +79,7 @@ class ProductRepository
             ProductTypeMapping::insert($ptmParams);
             CheckoutForm::insert([
                 "product_id" => $product->id,
-                "title" => "checkout page name",
+                "title" => "default checkout form",
                 "template" => '{
                     "type": "right sidebar",
                     "background_color": "blue"
@@ -105,6 +105,7 @@ class ProductRepository
                 }',
                 "requested_fields" => '[
                     {
+                        "key": "name",
                         "field": "input",
                         "type": "text",
                         "is_required": true,
@@ -112,27 +113,37 @@ class ProductRepository
                         "placeholder": ""
                     },
                     {
-                        "field": "textarea",
+                        "key": "phone",
+                        "field": "input",
+                        "type": "text",
                         "is_required": true,
                         "label": "custom field",
                         "placeholder": ""
                     },
                     {
+                        "key": "address",
+                        "field": "textarea",
+                        "is_required": false,
+                        "label": "Your full address",
+                        "placeholder": ""
+                    },
+                    {
+                        "key": "sex",
                         "field": "select",
-                        "is_required": true,
+                        "is_required": false,
                         "label": "custom field",
                         "placeholder": "",
                         "options": [
                             {
-                                "label": "Opsi1",
-                                "value": "opsi1"
+                                "label": "male",
+                                "value": "female"
                             }
                         ]
                     }
                 ]',
                 "is_dropship" => false,
                 "buy_button" => '{
-                    "label": "gabung kelas",
+                    "label": "Gabung Sekarang",
                     "color": "red"
                 }',
                 "video" => "",

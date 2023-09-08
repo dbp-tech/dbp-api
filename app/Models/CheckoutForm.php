@@ -17,4 +17,13 @@ class CheckoutForm extends Model
     
     protected $table = 'checkout_forms';
     protected $guarded = [];
+
+    public function product()
+    {
+        return $this->hasOne(Product::class, 'id', 'product_id');
+    }
+
+    public function checkout_form_bump_products() {
+        return $this->hasMany(Product::class, 'id', 'product_id');
+    }
 }

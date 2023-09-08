@@ -30,10 +30,10 @@ class VariantRepository
                 'price' => 'required',
                 'image' => 'required',
             ]);
-            if ($validator->fails()) return resultFunction('Err VR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err code VR-S: validation err ' . $validator->errors());
 
             $company = Company::find($data['company_id']);
-            if (!$company) return resultFunction('Err VR-S: company not found');
+            if (!$company) return resultFunction('Err code VR-S: company not found');
 
             $variant = new Variant();
             $variant->company_id = $data['company_id'];

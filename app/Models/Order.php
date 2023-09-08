@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ProductTypeMapping extends Model
+class Order extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,16 +15,16 @@ class ProductTypeMapping extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'product_type_mappings';
+    protected $table = 'orders';
     protected $guarded = [];
 
-    public function variant()
+    public function order_details()
     {
-        return $this->hasOne(Variant::class, 'id', 'entity_id');
+        return $this->hasMany(OrderDetail::class, 'order_id', 'id');
     }
 
-    public function recipe()
+    public function order_informations()
     {
-        return $this->hasOne(Recipe::class, 'id', 'entity_id');
+        return $this->hasMany(OrderInformation::class, 'order_id', 'id');
     }
 }

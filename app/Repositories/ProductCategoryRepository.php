@@ -28,10 +28,10 @@ class ProductCategoryRepository
                 'title' => 'required',
                 'company_id' => 'required',
             ]);
-            if ($validator->fails()) return resultFunction('Err PCR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err code PCR-S: validation err ' . $validator->errors());
 
             $company = Company::find($data['company_id']);
-            if (!$company) return resultFunction('Err PCR-S: company not found');
+            if (!$company) return resultFunction('Err code PCR-S: company not found');
 
             $productCategory = new ProductCategory();
             $productCategory->title = $data['title'];

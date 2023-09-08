@@ -7,4 +7,5 @@ Route::group(['prefix' => 'checkout-form'], function () {
     Route::get('/', [CheckoutFormController::class, 'index']);
     Route::post('/', [CheckoutFormController::class, 'save']);
     Route::delete('/{id?}/delete', [CheckoutFormController::class, 'delete']);
+    Route::get('/{id?}/detail', [CheckoutFormController::class, 'detail']);
 });

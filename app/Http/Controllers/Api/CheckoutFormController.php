@@ -31,4 +31,9 @@ class CheckoutFormController extends Controller
     {
         return response()->json($this->checkoutFormRepo->delete($id));
     }
+
+    public function detail($id = null)
+    {
+        return response()->json($this->checkoutFormRepo->detail($id));
+    }
 }

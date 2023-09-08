@@ -13,7 +13,8 @@ class CheckoutFormRepository
 {
     public function index($filters)
     {
-        $cf = CheckoutForm::with([]);
+        $cf = CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
+            'checkout_form_bump_products.product_type_mapping_variants.variant']);
         $cf = $cf->orderBy('id', 'desc')->paginate(25);
         return $cf;
     }
@@ -25,10 +26,10 @@ class CheckoutFormRepository
             $validator = Validator::make($data, [
                 'product_id' => 'required',
             ]);
-            if ($validator->fails()) return resultFunction('Err CFR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err code CFR-S: validation err ' . $validator->errors());
 
             $product = Product::find($data['product_id']);
-            if (!$product) return resultFunction('Err CFR-S: product not found');
+            if (!$product) return resultFunction('Err code CFR-S: product not found');
 
             $cf = new CheckoutForm();
             $cf->product_id = $data['product_id'];
@@ -84,7 +85,7 @@ class CheckoutFormRepository
         try {
             DB::beginTransaction();
             $cf =  CheckoutForm::find($id);
-            if (!$cf) return resultFunction('Err CFR-D: product category not found');
+            if (!$cf) return resultFunction('Err CFR-D: checkout form not found');
             $cf->delete();
 
             CheckoutFormBumpProduct::where('checkout_form_id', $id)->delete();
@@ -93,6 +94,17 @@ class CheckoutFormRepository
             return resultFunction("Success to delete checkout form", true);
         } catch (\Exception $e) {
             return resultFunction("Err code CFR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function detail($id) {
+        try {
+            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])->find($id);
+            if (!$cf) return resultFunction('Err CFR-De: product category not found');
+
+            return resultFunction("", true, $cf);
+        } catch (\Exception $e) {
+            return resultFunction("Err code CFR-De catch: " . $e->getMessage());
         }
     }
 }
