@@ -27,4 +27,9 @@ class Product extends Model
     {
         return $this->hasMany(ProductTypeMapping::class)->where("entity_type", 'recipes');
     }
+
+    public function product_fu_templates()
+    {
+        return $this->hasMany(ProductFuTemplate::class);
+    }
 }

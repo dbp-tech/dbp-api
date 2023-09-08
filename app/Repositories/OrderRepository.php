@@ -3,11 +3,11 @@
 namespace App\Repositories;
 
 use App\Models\CheckoutForm;
-use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\OrderFuHistory;
 use App\Models\OrderInformation;
-use App\Models\ProductCategory;
+use App\Models\OrderStatus;
 use App\Models\ProductTypeMapping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -120,11 +120,81 @@ class OrderRepository
 
     public function detail($id) {
         try {
-            $order =  Order::with(['order_details', 'order_informations'])->find($id);
+            $order =  Order::with(['order_details', 'order_informations', 'order_fu_histories', 'order_statuses'])->find($id);
             if (!$order) return resultFunction('Err code OR-De: order not found');
             return resultFunction("Success to delete order", true, $order);
         } catch (\Exception $e) {
             return resultFunction("Err code OR-De catch: " . $e->getMessage());
         }
+    }
+
+    public function saveFuHistory($data)
+    {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'order_id' => 'required',
+                'title' => 'required',
+                'description' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err OR-SFH: validation err ' . $validator->errors());
+
+            $order = Order::find($data['order_id']);
+            if (!$order) return resultFunction('Err code OR-SFH: order not found');
+
+            $orderFuHistory = new OrderFuHistory();
+            $orderFuHistory->order_id = $order->id;
+            $orderFuHistory->title = $data['title'];
+            $orderFuHistory->description = $data['description'];
+            $orderFuHistory->save();
+            DB::commit();
+            return resultFunction("Success to save fu history", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code OR-SFH catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexFuHistory($id)
+    {
+        $orderFuHistory = OrderFuHistory::with([]);
+        $orderFuHistory = $orderFuHistory->where('order_id', $id);
+        $orderFuHistory = $orderFuHistory->orderBy('id', 'desc')->get();
+        return $orderFuHistory;
+    }
+
+    public function saveStatus($data)
+    {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'order_id' => 'required',
+                'title' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err OR-SFH: validation err ' . $validator->errors());
+
+            $order = Order::find($data['order_id']);
+            if (!$order) return resultFunction('Err code OR-SFH: order not found');
+
+            $orderStatus = new OrderStatus();
+            $orderStatus->order_id = $order->id;
+            $orderStatus->title = $data['title'];
+            $orderStatus->save();
+
+            $order->last_status = $data['title'];
+            $order->save();
+
+            DB::commit();
+            return resultFunction("Success to save status", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code OR-SFH catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexStatus($id)
+    {
+        $indexStatus = OrderStatus::with([]);
+        $indexStatus = $indexStatus->where('order_id', $id);
+        $indexStatus = $indexStatus->orderBy('id', 'desc')->get();
+        return $indexStatus;
     }
 }

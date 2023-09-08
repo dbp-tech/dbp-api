@@ -30,4 +30,25 @@ class ProductController extends Controller
     {
         return response()->json($this->productRepo->delete($id));
     }
+
+    public function detail($id = null)
+    {
+        return response()->json($this->productRepo->detail($id));
+    }
+
+    public function indexFuTemplate(Request $request)
+    {
+        $filters = $request->only(['product_id']);
+        return response()->json($this->productRepo->indexFuTemplate($filters));
+    }
+
+    public function detailFuTemplate($id = null)
+    {
+        return response()->json($this->productRepo->detailFuTemplate($id));
+    }
+
+    public function saveFuTemplate(Request $request)
+    {
+        return response()->json($this->productRepo->saveFuTemplate($request->all()));
+    }
 }

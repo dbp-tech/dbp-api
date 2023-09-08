@@ -36,4 +36,24 @@ class OrderController extends Controller
     {
         return response()->json($this->orderRepo->detail($id));
     }
+
+    public function saveFuHistory(Request $request)
+    {
+        return response()->json($this->orderRepo->saveFuHistory($request->all()));
+    }
+
+    public function indexFuHistory($id)
+    {
+        return response()->json($this->orderRepo->indexFuHistory($id));
+    }
+
+    public function saveStatus(Request $request)
+    {
+        return response()->json($this->orderRepo->saveStatus($request->all()));
+    }
+
+    public function indexStatus($id)
+    {
+        return response()->json($this->orderRepo->indexStatus($id));
+    }
 }
