@@ -69,6 +69,7 @@ class OrderRepository
             $orderDetailParams = [];
             foreach ($data['orders'] as $orderData) {
                 $ptmSelect = $productTypeMapping->where('id', $orderData['product_type_mapping_id'])->first();
+                if (!$ptmSelect) return resultFunction("Err code OR-S: product type mapping id " . $orderData['product_type_mapping_id'] . " not found");
                 if ($ptmSelect->entity_type === 'variant') {
                     $orderDetailParams[] = [
                         'order_id' => $order->id,
