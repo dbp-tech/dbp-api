@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\CheckoutForm;
+use App\Models\Company;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\OrderFuHistory;
@@ -30,6 +32,9 @@ class OrderRepository
             ]);
             if ($validator->fails()) return resultFunction('Err OR-S: validation err ' . $validator->errors());
 
+            $company = Company::find($data['company_id']);
+            if (!$company)return resultFunction("Err OR-S: company not found");
+
             $cf = CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])->find($data['cf_id']);
             if (!$cf) return resultFunction('Err code OR-S: checkout form not found');
 
@@ -41,24 +46,27 @@ class OrderRepository
 
             $orderInformationParams = [];
             $requestFields = json_decode($cf->requested_fields, true);
+            $customerParams = [
+                'company_id' => $data['company_id'],
+                'uuid' => null,
+                'name' => '',
+                'email' => '',
+                'phone' => '',
+                "createdAt" => date("Y-m-d H:i:s"),
+                "updatedAt" => date("Y-m-d H:i:s")
+            ];
             foreach ($requestFields as $requestField) {
                 $fieldSelect = collect($data['fields'])->where('key', $requestField['key'])->first();
                 if ($requestField['is_required']) {
                     if (!$fieldSelect) {
                         return resultFunction("Err code OR-S: the " . $requestField['key'] . ' is required');
                     }
-                    $orderInformationParams[] = [
-                        "order_id" => $order->id,
-                        "key_information" => $fieldSelect['key'],
-                        "value_information" => $fieldSelect['value']
-                    ];
+                    $orderInformationParams[] = $this->setParamOrderInformation($order, $fieldSelect);
+                    $customerParams = $this->setParamCustomer($customerParams, $fieldSelect);
                 } else {
                     if ($fieldSelect) {
-                        $orderInformationParams[] = [
-                            "order_id" => $order->id,
-                            "key_information" => $fieldSelect['key'],
-                            "value_information" => $fieldSelect['value']
-                        ];
+                        $orderInformationParams[] = $this->setParamOrderInformation($order, $fieldSelect);
+                        $customerParams = $this->setParamCustomer($customerParams, $fieldSelect);
                     }
                 }
             }
@@ -93,6 +101,16 @@ class OrderRepository
                 }
             }
 
+            if ($customerParams['phone'] !== '') {
+                $customerHistory = Customer::with([])
+                    ->where('company_id', $data['company_id'])
+                    ->where('phone', $data)
+                    ->first();
+                if (!$customerHistory) {
+                    Customer::insert($customerParams);
+                }
+            }
+
             OrderInformation::insert($orderInformationParams);
             OrderDetail::insert($orderDetailParams);
 
@@ -101,6 +119,21 @@ class OrderRepository
         } catch (\Exception $e) {
             return resultFunction("Err code OR-S catch: " . $e->getMessage());
         }
+    }
+
+    public function setParamOrderInformation($order, $fieldSelect) {
+        return [
+            "order_id" => $order->id,
+            "key_information" => $fieldSelect['key'],
+            "value_information" => $fieldSelect['value']
+        ];
+    }
+
+    public function setParamCustomer($customerParam, $requestField) {
+        if ($requestField['key'] === 'name') $customerParam['name'] = $requestField['value'];
+        if ($requestField['key'] === 'email') $customerParam['email'] = $requestField['value'];
+        if ($requestField['key'] === 'phone') $customerParam['phone'] = $requestField['value'];
+        return $customerParam;
     }
 
     public function delete($id) {
