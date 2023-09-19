@@ -32,4 +32,9 @@ class Product extends Model
     {
         return $this->hasMany(ProductFuTemplate::class);
     }
+
+    public function product_category()
+    {
+        return $this->hasOne(ProductCategory::class, 'id', 'category_id');
+    }
 }

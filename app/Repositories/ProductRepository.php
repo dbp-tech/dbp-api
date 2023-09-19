@@ -18,7 +18,7 @@ class ProductRepository
 {
     public function index($filters)
     {
-        $product = Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe', 'product_fu_templates']);
+        $product = Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe', 'product_fu_templates', 'product_category']);
         if (!empty($filters['company_id'])) {
             $product = $product->where('company_id', $filters['company_id']);
         }
