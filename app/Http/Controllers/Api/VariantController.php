@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\TestMongo;
 use App\Repositories\VariantRepository;
 use Illuminate\Http\Request;
 
@@ -29,5 +30,11 @@ class VariantController extends Controller
     public function delete($id = null)
     {
         return response()->json($this->variantRepo->delete($id));
+    }
+
+    public function testMongo()
+    {
+        $data = TestMongo::all();
+        return response()->json($data);
     }
 }

@@ -7,4 +7,5 @@ Route::group(['prefix' => 'variant'], function () {
     Route::get('/', [VariantController::class, 'index']);
     Route::post('/', [VariantController::class, 'save']);
     Route::delete('/{id?}/delete', [VariantController::class, 'delete']);
+    Route::get('/test-mongo', [VariantController::class, 'testMongo']);
 });
