@@ -123,7 +123,9 @@ class ProductRepository
     public function detail($id) {
         try {
             DB::beginTransaction();
-            $product =  Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe', 'product_fu_templates'])->find($id);
+            $product =  Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe',
+                'product_fu_templates', 'checkout_forms'])
+                ->find($id);
             if (!$product) return resultFunction('Err PR-D: product category not found');
             DB::commit();
             return resultFunction("", true, $product);
