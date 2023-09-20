@@ -18,7 +18,7 @@ class OrderRepository
 {
     public function index($filters)
     {
-        $orders = Order::with([]);
+        $orders = Order::with(["order_details", "order_informations", "order_fu_histories", "order_statuses"]);
         $orders = $orders->orderBy('id', 'desc')->paginate(25);
         return $orders;
     }
@@ -154,7 +154,7 @@ class OrderRepository
 
     public function detail($id) {
         try {
-            $order =  Order::with(['order_details', 'order_informations', 'order_fu_histories', 'order_statuses'])->find($id);
+            $order =  Order::with(['order_details', 'order_informations'])->find($id);
             if (!$order) return resultFunction('Err code OR-De: order not found');
             return resultFunction("Success to delete order", true, $order);
         } catch (\Exception $e) {
