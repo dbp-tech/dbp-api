@@ -39,6 +39,7 @@ class OrderRepository
             if (!$cf) return resultFunction('Err code OR-S: checkout form not found');
 
             $order = new Order();
+            $order->checkout_form_id = $cf->id;
             $order->invoice_number = "";
             $order->save();
             $order->invoice_number = "OO" . $order->id;
