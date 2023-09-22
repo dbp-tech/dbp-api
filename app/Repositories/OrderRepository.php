@@ -18,7 +18,7 @@ class OrderRepository
 {
     public function index($filters)
     {
-        $orders = Order::with(["order_details", "order_informations", "order_fu_histories", "order_statuses"]);
+        $orders = Order::with(["order_details", "order_informations", "order_fu_histories", "order_statuses", "checkout_form.product.product_fu_templates"]);
         $orders = $orders->orderBy('id', 'desc')->paginate(25);
         return $orders;
     }

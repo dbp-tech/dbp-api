@@ -37,4 +37,9 @@ class Order extends Model
     {
         return $this->hasMany(OrderStatus::class, 'order_id', 'id');
     }
+
+    public function checkout_form()
+    {
+        return $this->hasOne(CheckoutForm::class, 'id', 'checkout_form_id');
+    }
 }
