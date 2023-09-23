@@ -41,6 +41,7 @@ class OrderRepository
             $order = new Order();
             $order->checkout_form_id = $cf->id;
             $order->invoice_number = "";
+            $order->last_status = 'pending';
             $order->save();
             $order->invoice_number = "OO" . $order->id;
             $order->save();
@@ -112,6 +113,13 @@ class OrderRepository
                 }
             }
 
+
+            OrderStatus::insert([
+                'order_id' => $order->id,
+                'title' => 'pending',
+                "createdAt" => date("Y-m-d H:i:s"),
+                "updatedAt" => date("Y-m-d H:i:s")
+            ]);
             OrderInformation::insert($orderInformationParams);
             OrderDetail::insert($orderDetailParams);
 
@@ -210,12 +218,16 @@ class OrderRepository
             $order = Order::find($data['order_id']);
             if (!$order) return resultFunction('Err code OR-SFH: order not found');
 
-            $orderStatus = new OrderStatus();
-            $orderStatus->order_id = $order->id;
-            $orderStatus->title = $data['title'];
-            $orderStatus->save();
+            if (in_array($data['title'], ['paid', 'unpaid'])) {
+                $order->paid_at = $data['title'] === 'paid' ? date("Y-m-d H:i:s"): null;
+            } else {
+                $orderStatus = new OrderStatus();
+                $orderStatus->order_id = $order->id;
+                $orderStatus->title = $data['title'];
+                $orderStatus->save();
 
-            $order->last_status = $data['title'];
+                $order->last_status = $data['title'];
+            }
             $order->save();
 
             DB::commit();
