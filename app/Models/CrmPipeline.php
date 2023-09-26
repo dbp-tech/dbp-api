@@ -19,6 +19,6 @@ class CrmPipeline extends Model
     protected $guarded = [];
 
     public function stages() {
-        return $this->hasMany(CrmStage::class, 'pipeline_id', 'id');
+        return $this->hasMany(CrmStage::class, 'pipeline_id', 'id')->orderBy('pipeline_index');
     }
 }
