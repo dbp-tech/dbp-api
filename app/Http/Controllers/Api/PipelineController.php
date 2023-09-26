@@ -50,7 +50,7 @@ class PipelineController extends Controller
 
     public function indexDeal(Request $request)
     {
-        $filters = $request->only(['title', 'pipeline_id']);
+        $filters = $request->only(['stage_id']);
         return response()->json($this->pipelineRepo->indexDeal($filters));
     }
 

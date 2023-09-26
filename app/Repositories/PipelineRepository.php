@@ -125,7 +125,7 @@ class PipelineRepository
             $pipeline = CrmPipeline::find($data['pipeline_id']);
             if (!$pipeline) return resultFunction('Err code PR-S: pipeline not found');
 
-            $stage = CrmPipeline::find($data['stage_id']);
+            $stage = CrmStage::find($data['stage_id']);
             if (!$stage) return resultFunction('Err code PR-S: stage not found');
 
             $customer = Customer::find($data['deal_customer']);
@@ -151,17 +151,14 @@ class PipelineRepository
 
     public function indexDeal($filters)
     {
-        $deals = CrmDeal::with(['deal_pipeline.pipeline', 'deal_pipeline.stage', 'deal_pipeline.customer']);
-        if (!empty($filters['title'])) {
-            $deals = $deals->where('deal_title', 'LIKE', '%' . $filters['title'] . '%');
-        }
-        if (!empty($filters['pipeline_id'])) {
-            $pipelineId = $filters['pipeline_id'];
-            $deals = $deals->whereHas('deal_pipeline', function ($q) use ($pipelineId) {
-                $q->where('pipeline_id', $pipelineId);
+        $deals = CrmDeal::with(['deal_pipeline']);
+        if (!empty($filters['stage_id'])) {
+            $stageId =  explode(",", $filters['stage_id']);
+            $deals = $deals->whereHas('deal_pipeline', function ($q) use ($stageId) {
+                $q->whereIn('stage_id', $stageId);
             });
         }
-        $deals = $deals->orderBy('id', 'desc')->paginate(25);
+        $deals = $deals->orderBy('id', 'desc')->get();
         return $deals;
     }
 
