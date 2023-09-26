@@ -22,7 +22,7 @@ class PipelineRepository
         if (!empty($filters['company_id'])) {
             $pipeline = $pipeline->where('company_id', $filters['company_id']);
         }
-        $pipeline = $pipeline->orderBy('id', 'desc')->paginate(25);
+        $pipeline = $pipeline->orderBy('id', 'desc')->get();
         return $pipeline;
     }
 
