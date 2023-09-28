@@ -36,4 +36,9 @@ class CheckoutFormController extends Controller
     {
         return response()->json($this->checkoutFormRepo->detail($id));
     }
+
+    public function detailEmbedForm($id = null)
+    {
+        return response()->json($this->checkoutFormRepo->detailEmbedForm($id));
+    }
 }

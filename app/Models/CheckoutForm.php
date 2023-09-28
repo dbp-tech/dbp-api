@@ -24,7 +24,7 @@ class CheckoutForm extends Model
     }
 
     public function checkout_form_bump_products() {
-        return $this->hasMany(Product::class, 'id', 'product_id');
+        return $this->hasOne(CheckoutFormBumpProduct::class, 'checkout_form_id', 'id');
     }
 
     public function orders() {

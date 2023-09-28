@@ -60,18 +60,13 @@ class CheckoutFormRepository
                 if (count($productBp) !== count($data['bump_products'])) return resultFunction("Err code CFR-S: bump product is not match");
             }
 
-            $cFBump = [];
-            foreach ($data['bump_products'] as $item) {
-                $cFBump[] = [
+            if ($data['bump_products']) {
+                CheckoutFormBumpProduct::insert([
                     'checkout_form_id' => $cf->id,
-                    'product_id' => $item,
+                    'product_id' => $data['bump_products'],
                     "createdAt" => date("Y-m-d H:i:s"),
                     "updatedAt" => date("Y-m-d H:i:s")
-                ];
-            }
-
-            if (count($cFBump) > 0) {
-                CheckoutFormBumpProduct::insert($cFBump);
+                ]);
             }
 
             DB::commit();
@@ -99,11 +94,58 @@ class CheckoutFormRepository
 
     public function detail($id) {
         try {
-            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])
+            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
+                'checkout_form_bump_products.product'])
                 ->find($id);
             if (!$cf) return resultFunction('Err CFR-De: checkout form not found');
 
             return resultFunction("", true, $cf);
+        } catch (\Exception $e) {
+            return resultFunction("Err code CFR-De catch: " . $e->getMessage());
+        }
+    }
+
+    public function detailEmbedForm($id) {
+        try {
+            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
+                'checkout_form_bump_products.product.product_type_mapping_variants.variant'
+//                , 'checkout_form_bump_products.product.product_type_mapping_recipes.recipe'
+            ])
+                ->find($id);
+            if (!$cf) return resultFunction('Err CFR-De: checkout form not found');
+
+            $bumpTitle = "";
+            $bumpDesc = "";
+            if ($cf->checkout_form_bump_products) {
+                $bumpTitle = $cf->checkout_form_bump_products->product->title;
+                $bumpDesc = $cf->checkout_form_bump_products->product->description;
+            }
+
+            $buttonData = json_decode($cf->buy_button, true);
+
+            return resultFunction("", true, [
+                'inputSection' => [
+                    'requested_field' => json_decode($cf->requested_fields, true)
+                ],
+                'paymentSection' => [
+                    "paymentOptions" => json_decode($cf->bank_accounts, true)
+                ],
+                'bumpSection' => [
+                    'bumpTitle' => $bumpTitle,
+                    'bumpDescription' => $bumpDesc
+                ],
+                "summarySection" => [
+                    "productData" => $cf->product,
+                    "bumpData" => $cf->checkout_form_bump_products->product,
+                    'uniqueCode' => $cf->product->unique_code,
+                    'price' => $cf->product->price,
+                    'salePrice' => $cf->product->sale_price
+                ],
+                "buttonSection" => [
+                    'buttonTitle' => $buttonData['label'],
+                    "buttonColor" => $buttonData['color']
+                ]
+            ]);
         } catch (\Exception $e) {
             return resultFunction("Err code CFR-De catch: " . $e->getMessage());
         }

@@ -17,4 +17,9 @@ class CheckoutFormBumpProduct extends Model
     
     protected $table = 'checkout_form_bump_products';
     protected $guarded = [];
+
+    public function product()
+    {
+        return $this->hasOne(Product::class, 'id', 'product_id');
+    }
 }

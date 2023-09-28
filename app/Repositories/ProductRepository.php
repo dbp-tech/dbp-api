@@ -54,7 +54,9 @@ class ProductRepository
             $product->category_id = $data['category_id'];
             $product->title = $data['title'];
             $product->description = $data['description'];
+            $product->unique_code = rand(100,999);
             $product->price = $data['price'];
+            $product->sale_price = $data['sale_price'];
             $product->image = json_encode($data['image']);
             $product->save();
 
