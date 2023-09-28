@@ -167,36 +167,39 @@ class ProductRepository
                         "field": "input",
                         "type": "text",
                         "is_required": true,
-                        "label": "custom field",
-                        "placeholder": ""
+                        "label": "Name",
+                        "placeholder": "name here"
                     },
                     {
                         "key": "phone",
                         "field": "input",
                         "type": "text",
                         "is_required": true,
-                        "label": "custom field",
-                        "placeholder": ""
+                        "label": "Phone",
+                        "placeholder": "phone / wa here"
+                    },
+                    {
+                        "key": "email",
+                        "field": "input",
+                        "type": "text",
+                        "is_required": false,
+                        "label": "Email",
+                        "placeholder": "email here"
+                    },
+                    {
+                        "key": "sub_district",
+                        "field": "input",
+                        "type": "text",
+                        "is_required": false,
+                        "label": "Sub District",
+                        "placeholder": "sub district here"
                     },
                     {
                         "key": "address",
                         "field": "textarea",
                         "is_required": false,
-                        "label": "Your full address",
-                        "placeholder": ""
-                    },
-                    {
-                        "key": "sex",
-                        "field": "select",
-                        "is_required": false,
-                        "label": "custom field",
-                        "placeholder": "",
-                        "options": [
-                            {
-                                "label": "male",
-                                "value": "female"
-                            }
-                        ]
+                        "label": "Full Address",
+                        "placeholder": "address here"
                     }
                 ]',
             "is_dropship" => false,
