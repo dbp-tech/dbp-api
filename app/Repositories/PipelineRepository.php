@@ -176,4 +176,37 @@ class PipelineRepository
             return resultFunction("Err code PR-D catch: " . $e->getMessage());
         }
     }
+
+    public function moveDeal($data)
+    {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'deal_id' => 'required',
+                'to_pipeline_id' => 'required',
+                'to_stage_id' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PR-M: validation err ' . $validator->errors());
+
+            $pipeline = CrmPipeline::find($data['to_pipeline_id']);
+            if (!$pipeline) return resultFunction('Err code PR-M: pipeline not found');
+
+            $stage = CrmStage::find($data['to_stage_id']);
+            if (!$stage) return resultFunction('Err code PR-M: stage not found');
+
+            $deal = CrmDeal::find($data['deal_id']);
+            if (!$deal) return resultFunction('Err code PR-M: deal not found');
+
+            $dealPipeline = new CrmDealPipeline();
+            $dealPipeline->deal_id = $deal->id;
+            $dealPipeline->pipeline_id = $pipeline->id;
+            $dealPipeline->stage_id = $stage->id;
+            $dealPipeline->save();
+
+            DB::commit();
+            return resultFunction("Success to move deal", true, $deal);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PR-M catch: " . $e->getMessage());
+        }
+    }
 }

@@ -63,4 +63,9 @@ class PipelineController extends Controller
     {
         return response()->json($this->pipelineRepo->deleteDeal($id));
     }
+
+    public function moveDeal(Request $request)
+    {
+        return response()->json($this->pipelineRepo->moveDeal($request->all()));
+    }
 }

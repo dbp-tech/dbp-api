@@ -16,5 +16,6 @@ Route::group(['prefix' => 'crm-pipeline'], function () {
         Route::get('/', [PipelineController::class, 'indexDeal']);
         Route::post('/', [PipelineController::class, 'saveDeal']);
         Route::delete('/{id?}/delete', [PipelineController::class, 'deleteDeal']);
+        Route::post('/move', [PipelineController::class, 'moveDeal']);
     });
 });
