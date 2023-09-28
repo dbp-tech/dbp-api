@@ -151,7 +151,7 @@ class PipelineRepository
 
     public function indexDeal($filters)
     {
-        $deals = CrmDeal::with(['deal_pipeline']);
+        $deals = CrmDeal::with(['deal_pipeline.stage']);
         if (!empty($filters['stage_id'])) {
             $stageId =  explode(",", $filters['stage_id']);
             $deals = $deals->whereHas('deal_pipeline', function ($q) use ($stageId) {
