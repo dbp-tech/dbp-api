@@ -109,7 +109,7 @@ class CheckoutFormRepository
         try {
             $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
                 'checkout_form_bump_products.product.product_type_mapping_variants.variant'
-//                , 'checkout_form_bump_products.product.product_type_mapping_recipes.recipe'
+                , 'checkout_form_bump_products.product.product_type_mapping_recipes.recipe'
             ])
                 ->find($id);
             if (!$cf) return resultFunction('Err CFR-De: checkout form not found');
@@ -122,6 +122,23 @@ class CheckoutFormRepository
             }
 
             $buttonData = json_decode($cf->buy_button, true);
+
+            $fbPixel = "";
+            $trackingData = collect(json_decode($cf->tracking, true));
+            $fbData = $trackingData->where('type', 'facebook-pixel')->first();
+            if ($fbData) {
+                $fbPixel = [
+                    "enabled" => true,
+                    'pixelId' => $fbData['id'],
+                    'event' => $fbData['data']
+                ];
+            }
+
+            $gtm = "";
+            $gtmData = $trackingData->where('type', 'google-tag-manager')->first();
+            if ($gtmData) {
+                $gtm = $gtmData['data'];
+            }
 
             return resultFunction("", true, [
                 'inputSection' => [
@@ -144,6 +161,10 @@ class CheckoutFormRepository
                 "buttonSection" => [
                     'buttonTitle' => $buttonData['label'],
                     "buttonColor" => $buttonData['color']
+                ],
+                "tracker" => [
+                    'fb-pixel' => $fbPixel,
+                    'gtm' => $gtm
                 ]
             ]);
         } catch (\Exception $e) {
