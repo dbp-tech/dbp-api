@@ -99,8 +99,7 @@ class CheckoutFormRepository
 
     public function detail($id) {
         try {
-            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
-                'checkout_form_bump_products.product'])
+            $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])
                 ->find($id);
             if (!$cf) return resultFunction('Err CFR-De: checkout form not found');
 
