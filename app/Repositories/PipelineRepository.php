@@ -209,4 +209,14 @@ class PipelineRepository
             return resultFunction("Err code PR-M catch: " . $e->getMessage());
         }
     }
+
+    public function detailDeal($id) {
+        try {
+            $deal =  CrmDeal::with(['deal_pipeline.pipeline', 'deal_pipeline.stage', 'deal_pipelines'])->find($id);
+            if (!$deal) return resultFunction('Err PR-Det: deal not found');
+            return resultFunction("", true, $deal);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PR-Det catch: " . $e->getMessage());
+        }
+    }
 }

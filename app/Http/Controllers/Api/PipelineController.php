@@ -68,4 +68,9 @@ class PipelineController extends Controller
     {
         return response()->json($this->pipelineRepo->moveDeal($request->all()));
     }
+
+    public function detailDeal($id = null)
+    {
+        return response()->json($this->pipelineRepo->detailDeal($id));
+    }
 }

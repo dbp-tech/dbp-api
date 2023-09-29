@@ -21,4 +21,8 @@ class CrmDeal extends Model
     public function deal_pipeline() {
         return $this->hasOne(CrmDealPipeline::class, 'deal_id', 'id')->orderBy('id', 'desc');
     }
+
+    public function deal_pipelines() {
+        return $this->hasMany(CrmDealPipeline::class, 'deal_id', 'id')->orderBy('id', 'desc');
+    }
 }
