@@ -33,6 +33,7 @@ class ProductRepository
             $validator = Validator::make($data, [
                 'company_id' => 'required',
                 'title' => 'required',
+                'sale_price' => 'required',
                 'price' => 'required',
                 'image' => 'required',
             ]);

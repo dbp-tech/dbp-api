@@ -105,14 +105,18 @@ class CheckoutFormRepository
         }
     }
 
-    public function detailEmbedForm($id) {
+    public function detailEmbedForm($id, $data) {
         try {
             $cf =  CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
                 'checkout_form_bump_products.product.product_type_mapping_variants.variant'
-                , 'checkout_form_bump_products.product.product_type_mapping_recipes.recipe'
+                , 'checkout_form_bump_products.product.product_type_mapping_recipes.recipe', 'product.company'
             ])
                 ->find($id);
             if (!$cf) return resultFunction('Err CFR-De: checkout form not found');
+
+            if ($cf->product_id != $data['product_id']) return resultFunction('Err CFR-De: product not found');
+
+            if ($cf->product->company->company_doc_id !== $data['company_doc_id']) return resultFunction('Err CFR-De: Company not match');
 
             $bumpTitle = "";
             $bumpDesc = "";

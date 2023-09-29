@@ -38,6 +38,11 @@ class Product extends Model
         return $this->hasOne(ProductCategory::class, 'id', 'category_id');
     }
 
+    public function company()
+    {
+        return $this->hasOne(Company::class, 'id', 'company_id');
+    }
+
     public function checkout_forms()
     {
         return $this->hasMany(CheckoutForm::class, 'product_id', 'id');
