@@ -29,10 +29,11 @@ class OrderRepository
             DB::beginTransaction();
             $validator = Validator::make($data, [
                 'cf_id' => 'required',
+                'company_doc_id' => 'required'
             ]);
             if ($validator->fails()) return resultFunction('Err OR-S: validation err ' . $validator->errors());
 
-            $company = Company::find($data['company_id']);
+            $company = Company::with([])->where("company_doc_id", $data['company_doc_id'])->first();
             if (!$company)return resultFunction("Err OR-S: company not found");
 
             $cf = CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])->find($data['cf_id']);
@@ -49,7 +50,7 @@ class OrderRepository
             $orderInformationParams = [];
             $requestFields = json_decode($cf->requested_fields, true);
             $customerParams = [
-                'company_id' => $data['company_id'],
+                'company_id' => $company->id,
                 'uuid' => null,
                 'name' => '',
                 'email' => '',
@@ -105,7 +106,7 @@ class OrderRepository
 
             if ($customerParams['phone'] !== '') {
                 $customerHistory = Customer::with([])
-                    ->where('company_id', $data['company_id'])
+                    ->where('company_id', $company->id)
                     ->where('phone', $data)
                     ->first();
                 if (!$customerHistory) {
