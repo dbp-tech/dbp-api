@@ -36,8 +36,17 @@ class OrderRepository
             $company = Company::with([])->where("company_doc_id", $data['company_doc_id'])->first();
             if (!$company)return resultFunction("Err OR-S: company not found");
 
-            $cf = CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe'])->find($data['cf_id']);
+            $cf = CheckoutForm::with([
+                'product.product_type_mapping_variants.variant',
+                'product.product_type_mapping_recipes.recipe',
+                'checkout_form_bump_products.product.product_type_mapping_variants.variant',
+                'checkout_form_bump_products.product.product_type_mapping_recipes.recipe'
+            ])->find($data['cf_id']);
             if (!$cf) return resultFunction('Err code OR-S: checkout form not found');
+
+            if ($data['is_bump_order']) {
+                if (!$cf->checkout_form_bump_products)  return resultFunction("Err code OR-S: the bump product not found");
+            }
 
             $order = new Order();
             $order->checkout_form_id = $cf->id;
@@ -45,6 +54,15 @@ class OrderRepository
             $order->last_status = 'pending';
             $order->save();
             $order->invoice_number = "OO" . $order->id;
+            $order->is_bump_product = $data['is_bump_order'] ? 1 : 0;
+            $order->delivery_local_label = $data['delivery_local']['label'];
+            $order->delivery_local_fee = $data['delivery_local']['fee'];
+            $order->product_total = $cf->product->sale_price;
+            $order->bump_product_total = 0;
+            if ($data['is_bump_order']) {
+                $order->bump_product_total = $cf->checkout_form_bump_products->product->sale_price;
+            }
+            $order->total_price = $order->product_total + $order->bump_product_total + $order->delivery_local_fee;
             $order->save();
 
             $orderInformationParams = [];

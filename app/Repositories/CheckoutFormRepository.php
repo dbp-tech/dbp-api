@@ -13,8 +13,10 @@ class CheckoutFormRepository
 {
     public function index($filters)
     {
-        $cf = CheckoutForm::with(['product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
-            'checkout_form_bump_products.product_type_mapping_variants.variant']);
+        $cf = CheckoutForm::with([
+            'product.product_type_mapping_variants.variant', 'product.product_type_mapping_recipes.recipe',
+            'checkout_form_bump_products.product.product_type_mapping_variants.variant'
+        ]);
         $cf = $cf->orderBy('id', 'desc')->paginate(25);
         return $cf;
     }
@@ -53,17 +55,15 @@ class CheckoutFormRepository
             $cf->bank_accounts = json_encode($data['bank_accounts']);
             $cf->save();
 
-            if (count($data['bump_products']) > 0) {
-                $productBp = Product::with([])
-                    ->whereIn("id", $data['bump_products'])
-                    ->get();
-                if (count($productBp) !== count($data['bump_products'])) return resultFunction("Err code CFR-S: bump product is not match");
-            }
-
             if ($data['bump_products']) {
+                $productBp = Product::with([])
+                    ->where("id", $data['bump_products']['product_id'])
+                    ->first();
+                if (!$productBp) return resultFunction("Err code CFR-S: bump product not found");
                 CheckoutFormBumpProduct::insert([
                     'checkout_form_id' => $cf->id,
-                    'product_id' => $data['bump_products'],
+                    'product_id' => $data['bump_products']['product_id'],
+                    'headline_title' => $data['bump_products']['headline_title'],
                     "createdAt" => date("Y-m-d H:i:s"),
                     "updatedAt" => date("Y-m-d H:i:s")
                 ]);
