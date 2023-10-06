@@ -17,7 +17,7 @@ class CheckCompanyDocId
      */
     public function handle($request, Closure $next)
     {
-        return response()->json($request->header('company_doc_id'));
+        return response()->json($request->headers->all());
         if (!$request->header('company_doc_id')) return response()->json(resultFunction("Err code M-CCD: company doc id is required"));
 
         $company = Company::with([])
