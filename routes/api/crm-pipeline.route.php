@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\PipelineController;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'crm-pipeline'], function () {
+Route::group(['prefix' => 'crm-pipeline', "middleware" => "checkCompayDocId"], function () {
     Route::get('/', [PipelineController::class, 'index']);
     Route::post('/', [PipelineController::class, 'save']);
     Route::delete('/{id?}/delete', [PipelineController::class, 'delete']);

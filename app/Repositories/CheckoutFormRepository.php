@@ -60,10 +60,12 @@ class CheckoutFormRepository
                     ->where("id", $data['bump_products']['product_id'])
                     ->first();
                 if (!$productBp) return resultFunction("Err code CFR-S: bump product not found");
+
                 CheckoutFormBumpProduct::insert([
                     'checkout_form_id' => $cf->id,
                     'product_id' => $data['bump_products']['product_id'],
                     'headline_title' => $data['bump_products']['headline_title'],
+                    'use_address' => $data['bump_products']['use_address'],
                     "createdAt" => date("Y-m-d H:i:s"),
                     "updatedAt" => date("Y-m-d H:i:s")
                 ]);
@@ -120,9 +122,32 @@ class CheckoutFormRepository
 
             $bumpTitle = "";
             $bumpDesc = "";
+            $useAddress = [];
             if ($cf->checkout_form_bump_products) {
                 $bumpTitle = $cf->checkout_form_bump_products->product->title;
                 $bumpDesc = $cf->checkout_form_bump_products->product->description;
+                if ($cf->checkout_form_bump_products->use_address) {
+                    $useAddress = [
+                        [
+                            'key' => 'district',
+                            'field' => 'select',
+                            'type' => 'select',
+                            'is_required' => false,
+                            'label' => 'Kecamatan Pemesan',
+                            'placeholder' => 'Kecamatan Pemesan',
+                            'isChecked' => false,
+                        ],
+                        [
+                            'key' => 'address',
+                            'field' => 'input',
+                            'type' => 'textarea',
+                            'is_required' => false,
+                            'label' => 'Alamat Lengkap Pemesan',
+                            'placeholder' => 'Alamat Lengkap Pemesan',
+                            'isChecked' => false
+                        ]
+                    ];
+                }
             }
 
             $buttonData = json_decode($cf->buy_button, true);
@@ -153,7 +178,8 @@ class CheckoutFormRepository
                 ],
                 'bumpSection' => [
                     'bumpTitle' => $bumpTitle,
-                    'bumpDescription' => $bumpDesc
+                    'bumpDescription' => $bumpDesc,
+                    "use_address" => $useAddress
                 ],
                 "summarySection" => [
                     "productData" => $cf->product,

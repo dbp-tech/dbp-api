@@ -8,34 +8,31 @@ use Illuminate\Support\Facades\Validator;
 
 class ProductCategoryRepository
 {
-    public function index($filters)
+    public function index($filters, $companyId)
     {
         $productCategories = ProductCategory::with([]);
         if (!empty($filters['title'])) {
             $productCategories = $productCategories->where('title', 'LIKE', '%' . $filters['title'] . '%');
         }
-        if (!empty($filters['company_id'])) {
-            $productCategories = $productCategories->where('company_id', $filters['company_id']);
-        }
+        $productCategories = $productCategories->where('company_id', $companyId);
         $productCategories = $productCategories->orderBy('id', 'desc')->paginate(25);
         return $productCategories;
     }
 
-    public function save($data)
+    public function save($data, $companyId)
     {
         try {
             $validator = Validator::make($data, [
                 'title' => 'required',
-                'company_id' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code PCR-S: validation err ' . $validator->errors());
 
-            $company = Company::find($data['company_id']);
+            $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code PCR-S: company not found');
 
             $productCategory = new ProductCategory();
             $productCategory->title = $data['title'];
-            $productCategory->company_id = $data['company_id'];
+            $productCategory->company_id = $company->id;
             $productCategory->save();
 
             return resultFunction("Success to create category", true, $productCategory);
@@ -44,10 +41,13 @@ class ProductCategoryRepository
         }
     }
 
-    public function delete($id) {
+    public function delete($id, $companyId) {
         try {
             $productCategory =  ProductCategory::find($id);
             if (!$productCategory) return resultFunction('Err PCR-D: product category not found');
+
+            if ($productCategory->company_id != $companyId)  return resultFunction('Err PCR-D: this category is not belongs to you');
+
             $productCategory->delete();
 
             return resultFunction("Success to delete category", true);

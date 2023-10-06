@@ -13,20 +13,18 @@ use Illuminate\Support\Facades\Validator;
 
 class PipelineRepository
 {
-    public function index($filters)
+    public function index($filters, $companyId)
     {
         $pipeline = CrmPipeline::with(['stages']);
         if (!empty($filters['title'])) {
             $pipeline = $pipeline->where('pipeline_title', 'LIKE', '%' . $filters['title'] . '%');
         }
-        if (!empty($filters['company_id'])) {
-            $pipeline = $pipeline->where('company_id', $filters['company_id']);
-        }
+        $pipeline = $pipeline->where('company_id', $companyId);
         $pipeline = $pipeline->orderBy('id', 'desc')->get();
         return $pipeline;
     }
 
-    public function save($data)
+    public function save($data, $companyId)
     {
         try {
             $validator = Validator::make($data, [
@@ -35,11 +33,11 @@ class PipelineRepository
             ]);
             if ($validator->fails()) return resultFunction('Err code PR-S: validation err ' . $validator->errors());
 
-            $company = Company::find($data['company_id']);
+            $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code PR-S: company not found');
 
             $pipeline = new CrmPipeline();
-            $pipeline->company_id = $data['company_id'];
+            $pipeline->company_id = $company->id;
             $pipeline->pipeline_title = $data['title'];
             $pipeline->save();
 
@@ -49,10 +47,13 @@ class PipelineRepository
         }
     }
 
-    public function delete($id) {
+    public function delete($id, $companyId) {
         try {
             $pipeline =  CrmPipeline::find($id);
             if (!$pipeline) return resultFunction('Err PR-D: pipeline not found');
+
+            if ($pipeline->company_id != $companyId)  return resultFunction('Err PR-D: pipeline not found');
+
             $pipeline->delete();
 
             return resultFunction("Success to delete pipeline", true);

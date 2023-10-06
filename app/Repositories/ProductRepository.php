@@ -16,22 +16,19 @@ use Illuminate\Support\Facades\Validator;
 
 class ProductRepository
 {
-    public function index($filters)
+    public function index($companyId)
     {
         $product = Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe', 'product_fu_templates', 'product_category']);
-        if (!empty($filters['company_id'])) {
-            $product = $product->where('company_id', $filters['company_id']);
-        }
+        $product = $product->where('company_id', $companyId);
         $product = $product->orderBy('id', 'desc')->paginate(25);
         return $product;
     }
 
-    public function save($data)
+    public function save($data, $companyId)
     {
         try {
             DB::beginTransaction();
             $validator = Validator::make($data, [
-                'company_id' => 'required',
                 'title' => 'required',
                 'sale_price' => 'required',
                 'price' => 'required',
@@ -39,7 +36,7 @@ class ProductRepository
             ]);
             if ($validator->fails()) return resultFunction('Err code PR-S: validation err ' . $validator->errors());
 
-            $company = Company::find($data['company_id']);
+            $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code PR-S: company not found');
 
             $productCategory = ProductCategory::find($data['category_id']);
@@ -51,7 +48,7 @@ class ProductRepository
             } else {
                 $product = new Product();
             }
-            $product->company_id = $data['company_id'];
+            $product->company_id = $company->id;
             $product->category_id = $data['category_id'];
             $product->title = $data['title'];
             $product->description = $data['description'];
@@ -106,11 +103,14 @@ class ProductRepository
         }
     }
 
-    public function delete($id) {
+    public function delete($id, $companyId) {
         try {
             DB::beginTransaction();
             $product =  Product::find($id);
-            if (!$product) return resultFunction('Err PR-D: product category not found');
+            if (!$product) return resultFunction('Err PR-D: product not found');
+
+            if ($product->company_id != $companyId) return resultFunction('Err PR-D: product not found');
+
             $product->delete();
 
             ProductTypeMapping::where('product_id', $id)->delete();
@@ -123,13 +123,14 @@ class ProductRepository
         }
     }
 
-    public function detail($id) {
+    public function detail($id, $companyId) {
         try {
             DB::beginTransaction();
             $product =  Product::with(['product_type_mapping_variants.variant', 'product_type_mapping_recipes.recipe',
                 'product_fu_templates', 'checkout_forms.orders'])
                 ->find($id);
             if (!$product) return resultFunction('Err PR-D: product category not found');
+            if ($product->company_id != $companyId) return resultFunction('Err PR-D: product not found');
             DB::commit();
             return resultFunction("", true, $product);
         } catch (\Exception $e) {

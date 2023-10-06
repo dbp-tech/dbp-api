@@ -17,17 +17,17 @@ class ProductCategoryController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['title', 'company_id']);
-        return response()->json($this->productCategoryRepo->index($filters));
+        $filters = $request->only(['title']);
+        return response()->json($this->productCategoryRepo->index($filters, $request->header('company_id')));
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->productCategoryRepo->save($request->all()));
+        return response()->json($this->productCategoryRepo->save($request->all(), $request->header('company_id')));
     }
 
-    public function delete($id = null)
+    public function delete(Request $request, $id = null)
     {
-        return response()->json($this->productCategoryRepo->delete($id));
+        return response()->json($this->productCategoryRepo->delete($id, $request->header('company_id')));
     }
 }

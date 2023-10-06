@@ -17,23 +17,22 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['company_id']);
-        return response()->json($this->productRepo->index($filters));
+        return response()->json($this->productRepo->index($request->header('company_id')));
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->productRepo->save($request->all()));
+        return response()->json($this->productRepo->save($request->all(), $request->header('company_id')));
     }
 
-    public function delete($id = null)
+    public function delete(Request $request, $id = null)
     {
-        return response()->json($this->productRepo->delete($id));
+        return response()->json($this->productRepo->delete($id, $request->header('company_id')));
     }
 
-    public function detail($id = null)
+    public function detail(Request $request, $id = null)
     {
-        return response()->json($this->productRepo->detail($id));
+        return response()->json($this->productRepo->detail($id, $request->header('company_id')));
     }
 
     public function indexFuTemplate(Request $request)

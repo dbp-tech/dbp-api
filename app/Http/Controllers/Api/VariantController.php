@@ -18,18 +18,18 @@ class VariantController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['title', 'company_id', "title", "price"]);
-        return response()->json($this->variantRepo->index($filters));
+        $filters = $request->only(["title", "price"]);
+        return response()->json($this->variantRepo->index($filters, $request->header('company_id')));
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->variantRepo->save($request->all()));
+        return response()->json($this->variantRepo->save($request->all(), $request->header('company_id')));
     }
 
-    public function delete($id = null)
+    public function delete(Request $request, $id = null)
     {
-        return response()->json($this->variantRepo->delete($id));
+        return response()->json($this->variantRepo->delete($id, $request->header('company_id')));
     }
 
     public function testMongo()
