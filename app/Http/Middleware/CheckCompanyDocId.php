@@ -17,11 +17,10 @@ class CheckCompanyDocId
      */
     public function handle($request, Closure $next)
     {
-        return response()->json($request->headers->all());
-        if (!$request->header('company_doc_id')) return response()->json(resultFunction("Err code M-CCD: company doc id is required"));
+        if (!$request->header('company-doc-id')) return response()->json(resultFunction("Err code M-CCD: company doc id is required"));
 
         $company = Company::with([])
-            ->where('company_doc_id', $request->header('company_doc_id'))
+            ->where('company_doc_id', $request->header('company-doc-id'))
             ->first();
         if (!$company) return response()->json(resultFunction("Err code M-CCD: company doc id not found"));
 
