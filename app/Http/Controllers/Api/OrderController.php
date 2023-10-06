@@ -19,22 +19,22 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $filters = $request->only([]);
-        return response()->json($this->orderRepo->index($filters));
+        return response()->json($this->orderRepo->index($filters, $request->header('company_id')));
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->orderRepo->save($request->all()));
+        return response()->json($this->orderRepo->save($request->all(), $request->header('company_id')));
     }
 
-    public function delete($id = null)
+    public function delete(Request $request, $id = null)
     {
-        return response()->json($this->orderRepo->delete($id));
+        return response()->json($this->orderRepo->delete($id, $request->header('company_id')));
     }
 
-    public function detail($id = null)
+    public function detail(Request $request, $id = null)
     {
-        return response()->json($this->orderRepo->detail($id));
+        return response()->json($this->orderRepo->detail($id, $request->header('company_id')));
     }
 
     public function saveFuHistory(Request $request)

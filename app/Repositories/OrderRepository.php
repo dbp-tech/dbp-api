@@ -16,24 +16,25 @@ use Illuminate\Support\Facades\Validator;
 
 class OrderRepository
 {
-    public function index($filters)
+    public function index($filters, $companyId)
     {
         $orders = Order::with(["order_details", "order_informations", "order_fu_histories", "order_statuses", "checkout_form.product.product_fu_templates"]);
-        $orders = $orders->orderBy('id', 'desc')->paginate(25);
+        $orders = $orders
+            ->where('company_id', $companyId)
+            ->orderBy('id', 'desc')->paginate(25);
         return $orders;
     }
 
-    public function save($data)
+    public function save($data, $companyId)
     {
         try {
             DB::beginTransaction();
             $validator = Validator::make($data, [
                 'cf_id' => 'required',
-                'company_doc_id' => 'required'
             ]);
             if ($validator->fails()) return resultFunction('Err OR-S: validation err ' . $validator->errors());
 
-            $company = Company::with([])->where("company_doc_id", $data['company_doc_id'])->first();
+            $company = Company::with([])->where("company_doc_id", $companyId)->first();
             if (!$company)return resultFunction("Err OR-S: company not found");
 
             $cf = CheckoutForm::with([
@@ -49,6 +50,7 @@ class OrderRepository
             }
 
             $order = new Order();
+            $order->company_id = $company->id;
             $order->checkout_form_id = $cf->id;
             $order->invoice_number = "";
             $order->last_status = 'pending';
@@ -164,11 +166,12 @@ class OrderRepository
         return $customerParam;
     }
 
-    public function delete($id) {
+    public function delete($id, $companyId) {
         try {
             DB::beginTransaction();
             $order =  Order::find($id);
             if (!$order) return resultFunction('Err code OR-D: order not found');
+            if ($order->company_id != $companyId) return resultFunction('Err code OR-D: order not found');
             $order->delete();
 
             OrderDetail::where('order_id', $id)->delete();
@@ -180,10 +183,11 @@ class OrderRepository
         }
     }
 
-    public function detail($id) {
+    public function detail($id, $companyId) {
         try {
             $order =  Order::with(['order_details', 'order_informations'])->find($id);
             if (!$order) return resultFunction('Err code OR-De: order not found');
+            if ($order->company_id != $companyId) return resultFunction('Err code OR-De: order not found');
             return resultFunction("Success to delete order", true, $order);
         } catch (\Exception $e) {
             return resultFunction("Err code OR-De catch: " . $e->getMessage());
