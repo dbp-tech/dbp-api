@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\CheckoutForm;
 use App\Models\Company;
+use App\Models\CompanyAccount;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductEntityType;
@@ -90,7 +91,20 @@ class ProductRepository
             }
 
             ProductTypeMapping::insert($ptmParams);
-            CheckoutForm::insert($this->checkoutFormTemplate($product));
+            $paramCF = $this->checkoutFormTemplate($product);
+            $companyAccounts = CompanyAccount::with([])
+                ->where('company_id', $company->id)
+                ->get();
+            $bankSaves = [];
+            foreach ($companyAccounts as $companyAccount) {
+                $bankSaves[] = [
+                    "bank" => $companyAccount->account_bank,
+                    "account_number" => $companyAccount->account_number,
+                    "account_holder_name" => $companyAccount->account_name
+                ];
+            }
+            $paramCF['bank_accounts'] = json_encode($bankSaves);
+            CheckoutForm::insert($paramCF);
             if (!isset($data['id'])) {
                 ProductFuTemplate::insert($this->fuTemplate($product));
             }
