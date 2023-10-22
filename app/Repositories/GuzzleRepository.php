@@ -33,6 +33,10 @@ class GuzzleRepository {
             $content = $response->getBody()->getContents();
             return resultFunction("", true, json_decode($content));
         } catch (\Exception $e) {
+            if ($e->getCode() == 401) {
+                $tokpedTokenCache = $this->createTokenTokped();
+                Cache::put('tokped_token', $tokpedTokenCache);
+            }
             return resultFunction("Err code GR-DD catch: " . $e->getMessage());
         }
     }
@@ -54,6 +58,10 @@ class GuzzleRepository {
             $content = $response->getBody()->getContents();
             return resultFunction("", true, json_decode($content, true));
         } catch (\Exception $e) {
+            if ($e->getCode() == 401) {
+                $tokpedTokenCache = $this->createTokenTokped();
+                Cache::put('tokped_token', $tokpedTokenCache);
+            }
             return resultFunction("Err code GR-DD catch: " . $e->getMessage());
         }
     }
