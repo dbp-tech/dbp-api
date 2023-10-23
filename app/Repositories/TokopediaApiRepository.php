@@ -120,7 +120,7 @@ class TokopediaApiRepository
             $data['product_id'] = $getData['data']['data']['success_rows_data'][0]['product_id'];
             TokpedProduct::create($data);
 
-            return resultFunction("", true, $getData);
+            return $getData;
         } catch (\Exception $e) {
             return resultFunction("Err code TAR-IC catch: " . $e->getMessage());
         }
