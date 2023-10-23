@@ -176,7 +176,7 @@ class TokopediaApiRepository
             $product = TokpedProduct::find($id);
 
             $getData = (new GuzzleRepository())->getData([], "https://fs.tokopedia.net/inventory/v1/fs/".$this->appId."/product/info?product_id=". $product->product_id);
-            return resultFunction("", true, $getData);
+            return $getData;
         } catch (\Exception $e) {
             return resultFunction("Err code TAR-IC catch: " . $e->getMessage());
         }
@@ -185,15 +185,13 @@ class TokopediaApiRepository
     public function indexOrder($filters = [])
     {
         try {
-            $fromDate = '2023-10-01 00:00:00';
+            $fromDate = date("Y-m-d") . ' 00:00:00';
             $fromDate = strtotime($fromDate);
             $toDate = date("Y-m-d") . ' 23:59:59';
             $toDate = strtotime($toDate);
             $getData = (new GuzzleRepository())->getData($filters,
                 "https://fs.tokopedia.net/v2/order/list?fs_id=".$this->appId."&shop_id=15618836&from_date=".$fromDate."&to_date=".$toDate."&page=1&per_page=1");
-            if (!$getData['status']) return $getData;
-
-            return resultFunction("", true, $getData);
+            return $getData;
         } catch (\Exception $e) {
             return resultFunction("Err code TAR-IC catch: " . $e->getMessage());
         }
