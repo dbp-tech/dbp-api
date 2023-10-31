@@ -13,15 +13,16 @@ use Illuminate\Queue\SerializesModels;
 class SaveTitktokDb implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    public $data;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct($data)
     {
-        //
+        $this->data = $data;
     }
 
     /**
@@ -31,9 +32,6 @@ class SaveTitktokDb implements ShouldQueue
      */
     public function handle()
     {
-        $dateNow = date("Y-m-d H:i:s");
-        $testMongo = new TestMongo();
-        $testMongo->date_now = $dateNow;
-        $testMongo->save();
+        TestMongo::create($this->data);
     }
 }

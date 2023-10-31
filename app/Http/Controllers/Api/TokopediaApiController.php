@@ -57,8 +57,8 @@ class TokopediaApiController extends Controller
         return response()->json($this->tokopediaApiRepo->indexOrder($request->all()));
     }
 
-    public function testTiktokBulk() {
-        dispatch(new SaveTitktokDb());
+    public function testTiktokBulk(Request $request) {
+        dispatch(new SaveTitktokDb($request->all()));
         return response()->json('oke');
     }
 }
