@@ -16,4 +16,5 @@ Route::group(['prefix' => 'tp-api'], function () {
     Route::group(['prefix' => 'order'], function () {
         Route::get('/index', [TokopediaApiController::class, 'indexOrder']);
     });
+    Route::get('/test-tiktok-bulk', [TokopediaApiController::class, 'testTiktokBulk']);
 });
