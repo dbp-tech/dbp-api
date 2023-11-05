@@ -201,4 +201,18 @@ class RestaurantRepository
             return resultFunction("Err code RR-SO catch: " . $e->getMessage());
         }
     }
+
+    public function deleteOutlet($id, $companyId) {
+        try {
+            $rsOutlet = RsOutlet::find($id);
+            if (!$rsOutlet) return resultFunction('Err RR-D: outlet not found');
+
+            if ($rsOutlet->company_id != $companyId) return resultFunction('Err RR-D: outlet not found');
+            $rsOutlet->delete();
+
+            return resultFunction("Success to delete menu", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
+    }
 }
