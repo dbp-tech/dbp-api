@@ -24,4 +24,8 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
         Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteOutlet']);
         Route::get('/{id?}/detail', [RestaurantController::class, 'detailOutlet']);
     });
+    Route::group(['prefix' => 'order'], function () {
+        Route::post('/', [RestaurantController::class, 'saveOrder']);
+        Route::get('/', [RestaurantController::class, 'indexOrder']);
+    });
 });

@@ -7,6 +7,8 @@ use App\Models\Recipe;
 use App\Models\RsCategory;
 use App\Models\RsMenu;
 use App\Models\RsMenuRecipe;
+use App\Models\RsOrder;
+use App\Models\RsMenuOrder;
 use App\Models\RsOutlet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -102,6 +104,7 @@ class RestaurantRepository
         try {
             $validator = Validator::make($data, [
                 'category' => 'required',
+                'image' => 'required',
                 'title' => 'required',
                 'price' => 'required',
                 'recipe' => 'required',
@@ -119,6 +122,7 @@ class RestaurantRepository
             $rsMenu->company_id = $company->id;
             $rsMenu->rs_category_id = $rsCategory->id;
             $rsMenu->title = $data['title'];
+            $rsMenu->image = $data['image']['url'];
             $rsMenu->price = $data['price'];
             $rsMenu->save();
 
@@ -214,5 +218,94 @@ class RestaurantRepository
         } catch (\Exception $e) {
             return resultFunction("Err code RR-D catch: " . $e->getMessage());
         }
+    }
+
+    public function saveOrder($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'menu_data' => 'required',
+                'table_number' => 'required',
+                'order_type' => 'required',
+                'name' => 'required',
+                'payment_type' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SOr: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SOr: company not found');
+
+            if (count($data['menu_data']) == 0) return resultFunction("Err code RR-SOr: menu data is not found");
+
+            $rsMenus = RsMenu::with([])
+                ->whereIn('id', array_column($data['menu_data'], 'menu_id'))
+                ->get();
+
+            if (count($data['menu_data']) !== count($rsMenus)) return resultFunction("Err code RR-SOr: the menu data is not same with our db");
+            $isEdit = false;
+            if (isset($data['id'])) {
+                $rsOrder = RsOrder::find($data['id']);
+                if (!$rsOrder) return resultFunction('Err code RR-SOr: order not found');
+                $isEdit = true;
+
+                RsMenuOrder::where('rs_order_id', $data['id'])->delete();
+            } else {
+                $rsOrder = new RsOrder();
+            }
+            $rsOrder->company_id = $company->id;
+            $rsOrder->order_number = "";
+            $rsOrder->table_number = $data['table_number'];
+            $rsOrder->order_type = $data['order_type'];
+            $rsOrder->price_total = 0;
+            $rsOrder->name = $data['name'];
+            if (isset($data['phone'])) {
+                if ($data['phone']) {
+                    $rsOrder->phone = $data['phone'];
+                }
+            }
+            $rsOrder->payment_type = $data['payment_type'];
+            $rsOrder->last_status = 'requested';
+            $rsOrder->save();
+
+            if (!$isEdit) {
+                $rsOrder->order_number = "ORDER" . $rsOrder->id;
+                $rsOrder->save();
+            }
+
+            $totalPrice = 0;
+            $rsOrderMenus = [];
+            foreach ($rsMenus as $menu) {
+                $dataMenu = (collect($data['menu_data']))->where('menu_id', $menu->id)->first();
+                $rsOrderMenus[] = [
+                    "rs_order_id" => $rsOrder->id,
+                    "rs_menu_id" => $menu->id,
+                    "quantity" => $dataMenu['quantity'],
+                    "menu_title" => $menu->title,
+                    "menu_price" => $menu->price,
+                    "menu_image" => $menu->image,
+                    "createdAt" => date("Y-m-d H:i:s"),
+                    "updatedAt" => date("Y-m-d H:i:s")
+                ];
+                $totalPrice = $totalPrice + ($menu->price * $dataMenu['quantity']);
+            }
+            $rsOrder->price_total = $totalPrice;
+            $rsOrder->save();
+
+            RsMenuOrder::insert($rsOrderMenus);
+
+            DB::commit();
+            return resultFunction("Success to create order", true, $rsOrder);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SOr catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexOrder($filters, $companyId)
+    {
+        $rsOrders = RsOrder::with(['rs_menu_orders.rs_menu']);
+        $rsOrders = $rsOrders->where('company_id', $companyId);
+        $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
+        return $rsOrders;
     }
 }
