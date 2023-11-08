@@ -8,7 +8,7 @@ use App\Models\RsCategory;
 use App\Models\RsMenu;
 use App\Models\RsMenuRecipe;
 use App\Models\RsOrder;
-use App\Models\RsMenuOrder;
+use App\Models\RsOrderMenu;
 use App\Models\RsOutlet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -36,12 +36,17 @@ class RestaurantRepository
                 'title' => 'required',
                 'description' => 'required'
             ]);
-            if ($validator->fails()) return resultFunction('Err code RR-S: validation err ' . $validator->errors());
+            if ($validator->fails()) return resultFunction('Err code RR-SC: validation err ' . $validator->errors());
 
             $company = Company::find($companyId);
-            if (!$company) return resultFunction('Err code RR-S: company not found');
+            if (!$company) return resultFunction('Err code RR-SC: company not found');
 
-            $rsCategory = new RsCategory();
+            if ($data['id']) {
+                $rsCategory = RsCategory::find($data['id']);
+                if (!$rsCategory) return resultFunction("Err code RR-SC: category not found");
+            }  else {
+                $rsCategory = new RsCategory();
+            }
             $rsCategory->company_id = $company->id;
             $rsCategory->title = $data['title'];
             $rsCategory->description = $data['description'];
@@ -49,7 +54,7 @@ class RestaurantRepository
 
             return resultFunction("Success to create category", true, $rsCategory);
         } catch (\Exception $e) {
-            return resultFunction("Err code RR-S catch: " . $e->getMessage());
+            return resultFunction("Err code RR-SC catch: " . $e->getMessage());
         }
     }
 
@@ -107,7 +112,7 @@ class RestaurantRepository
                 'image' => 'required',
                 'title' => 'required',
                 'price' => 'required',
-                'recipe' => 'required',
+                'recipes' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code RR-SM: validation err ' . $validator->errors());
             DB::beginTransaction();
@@ -118,16 +123,22 @@ class RestaurantRepository
             $rsCategory = RsCategory::find($data['category']['value']);
             if (!$rsCategory) return resultFunction('Err code RR-SM: company not found');
 
-            $rsMenu = new RsMenu();
+            if ($data['id']) {
+                $rsMenu = RsMenu::find($data['id']);
+                if (!$rsMenu) return resultFunction("Err code RR-SM: menu not found");
+                RsMenuRecipe::where('rs_menu_id', $data['id'])->delete();
+            } else {
+                $rsMenu = new RsMenu();
+            }
             $rsMenu->company_id = $company->id;
             $rsMenu->rs_category_id = $rsCategory->id;
             $rsMenu->title = $data['title'];
-            $rsMenu->image = $data['image']['url'];
+            $rsMenu->image = $data['image'];
             $rsMenu->price = $data['price'];
             $rsMenu->save();
 
             $rsMenuRecipes = [];
-            foreach ($data['recipe'] as $recip) {
+            foreach ($data['recipes'] as $recip) {
                 $rsMenuRecipes[] = [
                     'rs_menu_id' => $rsMenu->id,
                     'recipe_id' => $recip['value'],
@@ -193,10 +204,15 @@ class RestaurantRepository
             $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code RR-SO: company not found');
 
-            $rsOutlet = new RsOutlet();
+            if ($data['id']) {
+                $rsOutlet = RsOutlet::find($data['id']);
+                if (!$rsOutlet) return resultFunction('Err code RR-SO: outlet not found');
+            } else {
+                $rsOutlet = new RsOutlet();
+            }
             $rsOutlet->company_id = $company->id;
             $rsOutlet->name = $data['name'];
-            $rsOutlet->image = $data['image']['url'];
+            $rsOutlet->image = $data['image'];
             $rsOutlet->address = $data['address'];
             $rsOutlet->save();
 
@@ -249,7 +265,7 @@ class RestaurantRepository
                 if (!$rsOrder) return resultFunction('Err code RR-SOr: order not found');
                 $isEdit = true;
 
-                RsMenuOrder::where('rs_order_id', $data['id'])->delete();
+                RsOrderMenu::where('rs_order_id', $data['id'])->delete();
             } else {
                 $rsOrder = new RsOrder();
             }
@@ -292,7 +308,7 @@ class RestaurantRepository
             $rsOrder->price_total = $totalPrice;
             $rsOrder->save();
 
-            RsMenuOrder::insert($rsOrderMenus);
+            RsOrderMenu::insert($rsOrderMenus);
 
             DB::commit();
             return resultFunction("Success to create order", true, $rsOrder);
@@ -303,7 +319,7 @@ class RestaurantRepository
 
     public function indexOrder($filters, $companyId)
     {
-        $rsOrders = RsOrder::with(['rs_menu_orders.rs_menu']);
+        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu']);
         $rsOrders = $rsOrders->where('company_id', $companyId);
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;

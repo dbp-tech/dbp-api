@@ -18,7 +18,7 @@ class RsOrder extends Model
     protected $table = 'rs_orders';
     protected $guarded = [];
 
-    public function rs_menu_orders() {
-        return $this->hasMany(RsMenuOrder::class, 'rs_order_id', 'id');
+    public function rs_order_menus() {
+        return $this->hasMany(RsOrderMenu::class, 'rs_order_id', 'id');
     }
 }
