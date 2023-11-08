@@ -252,6 +252,9 @@ class RestaurantRepository
             $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code RR-SOr: company not found');
 
+            $rsOutlet = RsOutlet::find($data['outlet_id']);
+            if (!$rsOutlet) return resultFunction('Err code RR-SOr: outlet not found');
+
             if (count($data['menu_data']) == 0) return resultFunction("Err code RR-SOr: menu data is not found");
 
             $rsMenus = RsMenu::with([])
@@ -270,6 +273,7 @@ class RestaurantRepository
                 $rsOrder = new RsOrder();
             }
             $rsOrder->company_id = $company->id;
+            $rsOrder->rs_outlet_id = $rsOutlet->id;
             $rsOrder->order_number = "";
             $rsOrder->table_number = $data['table_number'];
             $rsOrder->order_type = $data['order_type'];
@@ -319,7 +323,7 @@ class RestaurantRepository
 
     public function indexOrder($filters, $companyId)
     {
-        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu']);
+        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet']);
         $rsOrders = $rsOrders->where('company_id', $companyId);
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;

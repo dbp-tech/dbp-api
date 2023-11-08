@@ -21,4 +21,8 @@ class RsOrder extends Model
     public function rs_order_menus() {
         return $this->hasMany(RsOrderMenu::class, 'rs_order_id', 'id');
     }
+
+    public function rs_outlet() {
+        return $this->hasOne(RsOutlet::class, 'id', 'rs_outlet_id');
+    }
 }
