@@ -109,7 +109,6 @@ class RestaurantRepository
         try {
             $validator = Validator::make($data, [
                 'category' => 'required',
-                'image' => 'required',
                 'title' => 'required',
                 'price' => 'required',
                 'recipes' => 'required',
@@ -133,7 +132,7 @@ class RestaurantRepository
             $rsMenu->company_id = $company->id;
             $rsMenu->rs_category_id = $rsCategory->id;
             $rsMenu->title = $data['title'];
-            $rsMenu->image = $data['image'];
+            $rsMenu->image = isset($data['image']) ? ($data['image'] ? : '') : '';
             $rsMenu->price = $data['price'];
             $rsMenu->save();
 
