@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Company;
 use App\Models\Recipe;
 use App\Models\RsCategory;
+use App\Models\RsCoupon;
 use App\Models\RsMenu;
 use App\Models\RsMenuRecipe;
 use App\Models\RsOrder;
@@ -292,23 +293,49 @@ class RestaurantRepository
                 $rsOrder->save();
             }
 
+            $couponDbs = RsCoupon::with(['rs_coupon_menus'])
+                ->whereIn('id', array_column($data['menu_data'], 'coupon_id'))
+                ->get();
+
             $totalPrice = 0;
+            $totalDiscountPrice = 0;
             $rsOrderMenus = [];
             foreach ($rsMenus as $menu) {
                 $dataMenu = (collect($data['menu_data']))->where('menu_id', $menu->id)->first();
+                $discountPrice = 0;
+                $couponData = $couponDbs->where('id', $dataMenu['coupon_id'])->first();
+                if ($dataMenu['coupon_id'] AND !$couponData) return resultFunction("Err code RR-SOr: the coupon data is not found");
+
+                $totalPriceQty = $menu->price * $dataMenu['quantity'];
+                if ($couponData) {
+                    if ($couponData->coupon_type === 'percentage') {
+                        $discountPrice = $couponData->type_value * $totalPriceQty / 100;
+                    } else {
+                        $discountPrice = $couponData->type_value;
+                    }
+                }
                 $rsOrderMenus[] = [
                     "rs_order_id" => $rsOrder->id,
                     "rs_menu_id" => $menu->id,
                     "quantity" => $dataMenu['quantity'],
                     "menu_title" => $menu->title,
-                    "menu_price" => $menu->price,
+                    "menu_price" => $totalPriceQty,
                     "menu_image" => $menu->image,
+                    "discount_price" => $discountPrice,
+                    "total_price" => $totalPriceQty - $discountPrice,
+                    "coupon_name" => $couponData ? $couponData->coupon_name : null,
+                    "coupon_type" => $couponData ? $couponData->coupon_type : null,
+                    "coupon_value" => $couponData ? $couponData->type_value : 0,
                     "createdAt" => date("Y-m-d H:i:s"),
                     "updatedAt" => date("Y-m-d H:i:s")
                 ];
-                $totalPrice = $totalPrice + ($menu->price * $dataMenu['quantity']);
+
+                $totalPrice = $totalPrice + $totalPriceQty;
+                $totalDiscountPrice = $totalDiscountPrice + $discountPrice;
             }
             $rsOrder->price_total = $totalPrice;
+            $rsOrder->discount_price_total = $totalDiscountPrice;
+            $rsOrder->price_total_final = $totalPrice - $totalDiscountPrice;
             $rsOrder->save();
 
             RsOrderMenu::insert($rsOrderMenus);
