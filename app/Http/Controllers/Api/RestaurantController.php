@@ -93,7 +93,7 @@ class RestaurantController extends Controller
 
     public function indexOrderAll(Request $request)
     {
-        $filters = $request->only([]);
+        $filters = $request->only(['order_number', 'table_number', 'order_type', 'name', 'payment_type']);
         return response()->json($this->restaurantRepo->indexOrderAll($filters, $request->header('company_id')));
     }
 
