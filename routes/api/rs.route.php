@@ -26,6 +26,7 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
     });
     Route::group(['prefix' => 'order'], function () {
         Route::post('/', [RestaurantController::class, 'saveOrder']);
-        Route::get('/', [RestaurantController::class, 'indexOrder']);
+        Route::get('/', [RestaurantController::class, 'indexOrderAll']);
+        Route::get('/paginate', [RestaurantController::class, 'indexOrder']);
     });
 });

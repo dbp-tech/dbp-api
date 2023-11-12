@@ -351,6 +351,34 @@ class RestaurantRepository
     {
         $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet']);
         $rsOrders = $rsOrders->where('company_id', $companyId);
+
+        if ($filters['order_number']) {
+            $rsOrders = $rsOrders->where('order_number', 'like', '%' . $filters['order_number'] . '%');
+        }
+
+        if ($filters['table_number']) {
+            $rsOrders = $rsOrders->where('table_number', 'like', '%' . $filters['table_number'] . '%');
+        }
+
+        if ($filters['order_type']) {
+            $rsOrders = $rsOrders->where('order_type', $filters['order_type']);
+        }
+
+        if ($filters['name']) {
+            $rsOrders = $rsOrders->where('name', 'like', '%' . $filters['name'] . '%');
+        }
+
+        if ($filters['payment_type']) {
+            $rsOrders = $rsOrders->where('payment_type', 'like', '%' . $filters['payment_type'] . '%');
+        }
+        $rsOrders = $rsOrders->orderBy('id', 'desc')->paginate(25);
+        return $rsOrders;
+    }
+
+    public function indexOrderAll($filters, $companyId)
+    {
+        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet']);
+        $rsOrders = $rsOrders->where('company_id', $companyId);
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;
     }
