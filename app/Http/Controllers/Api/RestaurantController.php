@@ -102,4 +102,20 @@ class RestaurantController extends Controller
         $filters = $request->only(['order_number', 'table_number', 'order_type', 'name', 'payment_type', 'created_at']);
         return response()->json($this->restaurantRepo->indexOrder($filters, $request->header('company_id')));
     }
+
+    public function indexMenuAddons(Request $request)
+    {
+        $filters = $request->only(["rs_menu_id", "title", "status"]);
+        return response()->json($this->restaurantRepo->indexMenuAddons($filters, $request->header('company_id')));
+    }
+
+    public function saveMenuAddons(Request $request)
+    {
+        return response()->json($this->restaurantRepo->saveMenuAddons($request->all(), $request->header('company_id')));
+    }
+
+    public function deleteMenuAddons(Request $request, $id = null)
+    {
+        return response()->json($this->restaurantRepo->deleteMenuAddons($id, $request->header('company_id')));
+    }
 }

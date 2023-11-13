@@ -17,6 +17,13 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
         Route::post('/', [RestaurantController::class, 'saveMenu']);
         Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteMenu']);
         Route::get('/{id?}/detail', [RestaurantController::class, 'detailMenu']);
+
+        Route::group(['prefix' => 'addons'], function () {
+            Route::get('/', [RestaurantController::class, 'indexMenuAddons']);
+            Route::post('/', [RestaurantController::class, 'saveMenuAddons']);
+            Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteMenuAddons']);
+            Route::get('/{id?}/detail', [RestaurantController::class, 'detailMenuAddons']);
+        });
     });
     Route::group(['prefix' => 'outlet'], function () {
         Route::get('/', [RestaurantController::class, 'indexOutlet']);

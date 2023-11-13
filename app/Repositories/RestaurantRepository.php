@@ -7,6 +7,7 @@ use App\Models\Recipe;
 use App\Models\RsCategory;
 use App\Models\RsCoupon;
 use App\Models\RsMenu;
+use App\Models\RsMenuAddon;
 use App\Models\RsMenuRecipe;
 use App\Models\RsOrder;
 use App\Models\RsOrderMenu;
@@ -410,5 +411,19 @@ class RestaurantRepository
         }
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;
+    }
+
+    public function indexMenuAddons($filters, $companyId)
+    {
+        $rsMenu = RsMenuAddon::with(['rs_menu', 'rs_menu_addon_recipes.recipe']);
+        if (!empty($filters['title'])) {
+            $rsMenu = $rsMenu->where('title', 'LIKE', '%' . $filters['title'] . '%');
+        }
+        if (!empty($filters['rs_menu_id'])) {
+            $rsMenu = $rsMenu->where('rs_menu_id',  $filters['rs_menu_id']);
+        }
+        $rsMenu = $rsMenu->where('company_id', $companyId);
+        $rsMenu = $rsMenu->orderBy('id', 'desc')->get();
+        return $rsMenu;
     }
 }
