@@ -406,7 +406,7 @@ class RestaurantRepository
         }
 
         if (!empty($filters['created_at'])) {
-            $rsOrders = $rsOrders->whereBetween('createdAt', [$filters['created_at'] . ' 00:00:00', $filters['created_at'] . ' 23:59:59']);
+            $rsOrders = $rsOrders->whereDate('createdAt', $filters['created_at']);
         }
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;
