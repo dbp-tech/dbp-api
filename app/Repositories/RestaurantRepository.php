@@ -372,6 +372,10 @@ class RestaurantRepository
         if (!empty($filters['payment_type'])) {
             $rsOrders = $rsOrders->where('payment_type', 'like', '%' . $filters['payment_type'] . '%');
         }
+
+        if (!empty($filters['created_at'])) {
+            $rsOrders = $rsOrders->whereBetween('createdAt', [$filters['created_at'] . ' 00:00:00', $filters['created_at'] . ' 23:59:59']);
+        }
         $rsOrders = $rsOrders->orderBy('id', 'desc')->paginate(25);
         return $rsOrders;
     }
@@ -399,6 +403,10 @@ class RestaurantRepository
 
         if (!empty($filters['payment_type'])) {
             $rsOrders = $rsOrders->where('payment_type', 'like', '%' . $filters['payment_type'] . '%');
+        }
+
+        if (!empty($filters['created_at'])) {
+            $rsOrders = $rsOrders->whereBetween('createdAt', [$filters['created_at'] . ' 00:00:00', $filters['created_at'] . ' 23:59:59']);
         }
         $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;
