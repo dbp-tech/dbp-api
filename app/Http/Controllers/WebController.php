@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Repositories\RestaurantRepository;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -9,7 +12,9 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class WebController extends Controller {
-    public function rsOrderPrint() {
+    public function rsOrderPrint(Request $request) {
+        $filters = $request->only(['order_number', 'table_number', 'order_type', 'name', 'payment_type', 'created_at', 'company_id']);
+        $data = (new RestaurantRepository())->indexOrder($filters, $filters['company_id'], true);
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $fileName = 'export-order-'.date('Y-m-d H:i:s');
@@ -72,6 +77,24 @@ class WebController extends Controller {
         $sheet->setCellValue('D1', 'Order Type')->getStyle('D1')->applyFromArray($headerStyle);
         $sheet->setCellValue('E1', 'Total')->getStyle('E1')->applyFromArray($headerStyle);
         $sheet->setCellValue('F1', 'Created At')->getStyle('F1')->applyFromArray($headerStyle);
+
+
+        $num = 2;
+        foreach ($data as $item){
+            $sheet->setCellValue('A'.$num, $item["order_number"])
+                ->getStyle('A'.$num)->applyFromArray($fillStyle);
+            $sheet->setCellValue('B'.$num, $item["table_number"])
+                ->getStyle('B'.$num)->applyFromArray($fillStyle);
+            $sheet->setCellValue('C'.$num, $item['name'])
+                ->getStyle('C'.$num)->applyFromArray($fillStyle);
+            $sheet->setCellValue('D'.$num, $item["order_type"])
+                ->getStyle('D'.$num)->applyFromArray($fillStyle);
+            $sheet->setCellValue('E'.$num, ceil($item["price_total"]))
+                ->getStyle('E'.$num)->applyFromArray($fillStyle);
+            $sheet->setCellValue('F'.$num, $item["createdAt"]->toDateTimeString())
+                ->getStyle('F'.$num)->applyFromArray($fillStyle);
+            $num++;
+        }
 
 
         $writer = new Xlsx($spreadsheet);

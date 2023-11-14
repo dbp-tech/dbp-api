@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
+use App\Models\RsOrder;
 use App\Models\TestMongo;
 use App\Repositories\RestaurantRepository;
 use App\Repositories\VariantRepository;
@@ -91,12 +93,6 @@ class RestaurantController extends Controller
         return response()->json($this->restaurantRepo->saveOrder($request->all(), $request->header('company_id')));
     }
 
-    public function indexOrderAll(Request $request)
-    {
-        $filters = $request->only(['order_number', 'table_number', 'order_type', 'name', 'payment_type', 'created_at']);
-        return response()->json($this->restaurantRepo->indexOrderAll($filters, $request->header('company_id')));
-    }
-
     public function indexOrder(Request $request)
     {
         $filters = $request->only(['order_number', 'table_number', 'order_type', 'name', 'payment_type', 'created_at']);
@@ -117,5 +113,13 @@ class RestaurantController extends Controller
     public function deleteMenuAddons(Request $request, $id = null)
     {
         return response()->json($this->restaurantRepo->deleteMenuAddons($id, $request->header('company_id')));
+    }
+
+    public function lastWeekOrder(Request $request)
+    {
+        $orderData = RsOrder::where('company_id', $request->header('company_id'))
+            ->where('createdAt', '>', date("Y-m-d H:i:s", strtotime('-7 days')))
+            ->get();
+        return count($orderData);
     }
 }

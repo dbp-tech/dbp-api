@@ -8,9 +8,11 @@ use App\Models\RsCategory;
 use App\Models\RsCoupon;
 use App\Models\RsMenu;
 use App\Models\RsMenuAddon;
+use App\Models\RsMenuAddonRecipe;
 use App\Models\RsMenuRecipe;
 use App\Models\RsOrder;
 use App\Models\RsOrderMenu;
+use App\Models\RsOrderMenuAddon;
 use App\Models\RsOutlet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -89,7 +91,7 @@ class RestaurantRepository
 
     public function indexMenu($filters, $companyId)
     {
-        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe']);
+        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_menu_addons']);
         if (!empty($filters['title'])) {
             $rsMenu = $rsMenu->where('title', 'LIKE', '%' . $filters['title'] . '%');
         }
@@ -258,7 +260,7 @@ class RestaurantRepository
 
             if (count($data['menu_data']) == 0) return resultFunction("Err code RR-SOr: menu data is not found");
 
-            $rsMenus = RsMenu::with([])
+            $rsMenus = RsMenu::with(['rs_menu_addons'])
                 ->whereIn('id', array_column($data['menu_data'], 'menu_id'))
                 ->get();
 
@@ -300,7 +302,8 @@ class RestaurantRepository
 
             $totalPrice = 0;
             $totalDiscountPrice = 0;
-            $rsOrderMenus = [];
+            $totalAddonPrice = 0;
+            $rsOrderMenuAddon = [];
             foreach ($rsMenus as $menu) {
                 $dataMenu = (collect($data['menu_data']))->where('menu_id', $menu->id)->first();
                 $discountPrice = 0;
@@ -315,7 +318,9 @@ class RestaurantRepository
                         $discountPrice = $couponData->type_value;
                     }
                 }
-                $rsOrderMenus[] = [
+
+
+                $rsOrderMenu = RsOrderMenu::create([
                     "rs_order_id" => $rsOrder->id,
                     "rs_menu_id" => $menu->id,
                     "quantity" => $dataMenu['quantity'],
@@ -326,20 +331,43 @@ class RestaurantRepository
                     "total_price" => $totalPriceQty - $discountPrice,
                     "coupon_name" => $couponData ? $couponData->coupon_name : null,
                     "coupon_type" => $couponData ? $couponData->coupon_type : null,
-                    "coupon_value" => $couponData ? $couponData->type_value : 0,
-                    "createdAt" => date("Y-m-d H:i:s"),
-                    "updatedAt" => date("Y-m-d H:i:s")
-                ];
+                    "coupon_value" => $couponData ? $couponData->type_value : 0
+                ]);
+
+                $addonPrice = 0;
+                if (count($dataMenu['addons']) > 0) {
+                    foreach ($dataMenu['addons'] as $addon) {
+                        $menuAddonSelected = $menu->rs_menu_addons->where('id', $addon['id'])->first();
+                        if (!$menuAddonSelected) return resultFunction("Err code RR-SOr: menu addon not found");
+
+                        $rsOrderMenuAddon[] = [
+                            "rs_order_menu_id" => $rsOrderMenu->id,
+                            "rs_menu_addon_id" => $menuAddonSelected->id,
+                            "quantity" => $addon['qty'],
+                            "addon_title" => $menuAddonSelected->title,
+                            "addon_price" => $menuAddonSelected->price,
+                            "addon_image" => $menu->image,
+                            "createdAt" => date("Y-m-d H:i:s"),
+                            "updatedAt" => date("Y-m-d H:i:s")
+                        ];
+                        $addonPrice = $addonPrice + ($addon['qty'] * $menuAddonSelected->price);
+                    }
+                }
+                if ($addonPrice > 0) {
+                    $rsOrderMenu->addon_price = $addonPrice;
+                    $rsOrderMenu->save();
+                }
 
                 $totalPrice = $totalPrice + $totalPriceQty;
                 $totalDiscountPrice = $totalDiscountPrice + $discountPrice;
+                $totalAddonPrice = $totalAddonPrice + $addonPrice;
             }
+            RsOrderMenuAddon::insert($rsOrderMenuAddon);
             $rsOrder->price_total = $totalPrice;
             $rsOrder->discount_price_total = $totalDiscountPrice;
-            $rsOrder->price_total_final = $totalPrice - $totalDiscountPrice;
+            $rsOrder->addon_price = $totalAddonPrice;
+            $rsOrder->price_total_final = $totalPrice - $totalDiscountPrice + $totalAddonPrice;
             $rsOrder->save();
-
-            RsOrderMenu::insert($rsOrderMenus);
 
             DB::commit();
             return resultFunction("Success to create order", true, $rsOrder);
@@ -348,9 +376,9 @@ class RestaurantRepository
         }
     }
 
-    public function indexOrder($filters, $companyId)
+    public function indexOrder($filters, $companyId, $all = false)
     {
-        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet']);
+        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet', 'rs_order_menus.rs_order_menu_addons']);
         $rsOrders = $rsOrders->where('company_id', $companyId);
 
 
@@ -377,39 +405,11 @@ class RestaurantRepository
         if (!empty($filters['created_at'])) {
             $rsOrders = $rsOrders->whereBetween('createdAt', [$filters['created_at'] . ' 00:00:00', $filters['created_at'] . ' 23:59:59']);
         }
-        $rsOrders = $rsOrders->orderBy('id', 'desc')->paginate(25);
-        return $rsOrders;
-    }
-
-    public function indexOrderAll($filters, $companyId)
-    {
-        $rsOrders = RsOrder::with(['rs_order_menus.rs_menu', 'rs_outlet']);
-        $rsOrders = $rsOrders->where('company_id', $companyId);
-
-        if (!empty($filters['order_number'])) {
-            $rsOrders = $rsOrders->where('order_number', 'like', '%' . $filters['order_number'] . '%');
+        if (!$all) {
+            $rsOrders = $rsOrders->orderBy('id', 'desc')->paginate(5);
+        } else {
+            $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         }
-
-        if (!empty($filters['table_number'])) {
-            $rsOrders = $rsOrders->where('table_number', 'like', '%' . $filters['table_number'] . '%');
-        }
-
-        if (!empty($filters['order_type'])) {
-            $rsOrders = $rsOrders->where('order_type', $filters['order_type']);
-        }
-
-        if (!empty($filters['name'])) {
-            $rsOrders = $rsOrders->where('name', 'like', '%' . $filters['name'] . '%');
-        }
-
-        if (!empty($filters['payment_type'])) {
-            $rsOrders = $rsOrders->where('payment_type', 'like', '%' . $filters['payment_type'] . '%');
-        }
-
-        if (!empty($filters['created_at'])) {
-            $rsOrders = $rsOrders->whereDate('createdAt', $filters['created_at']);
-        }
-        $rsOrders = $rsOrders->orderBy('id', 'desc')->get();
         return $rsOrders;
     }
 
@@ -425,5 +425,70 @@ class RestaurantRepository
         $rsMenu = $rsMenu->where('company_id', $companyId);
         $rsMenu = $rsMenu->orderBy('id', 'desc')->get();
         return $rsMenu;
+    }
+
+    public function saveMenuAddons($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'menu' => 'required',
+                'title' => 'required',
+                'price' => 'required',
+                'recipes' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SM: validation err ' . $validator->errors());
+            DB::beginTransaction();
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SM: company not found');
+
+            $rsMenu = RsMenu::find($data['menu']['value']);
+            if (!$rsMenu) return resultFunction('Err code RR-SM: menu not found');
+
+            if ($data['id']) {
+                $rsMenuAddon = RsMenuAddon::find($data['id']);
+                if (!$rsMenuAddon) return resultFunction("Err code RR-SM: menu addon not found");
+                RsMenuAddonRecipe::where('rs_menu_addon_id', $data['id'])->delete();
+            } else {
+                $rsMenuAddon = new RsMenuAddon();
+            }
+            $rsMenuAddon->company_id = $company->id;
+            $rsMenuAddon->rs_menu_id = $rsMenu->id;
+            $rsMenuAddon->title = $data['title'];
+            $rsMenuAddon->image = isset($data['image']) ? ($data['image'] ? : '') : '';
+            $rsMenuAddon->price = $data['price'];
+            $rsMenuAddon->save();
+
+            $rsMenuAddonRecipes = [];
+            foreach ($data['recipes'] as $recip) {
+                $rsMenuAddonRecipes[] = [
+                    'rs_menu_addon_id' => $rsMenuAddon->id,
+                    'recipe_id' => $recip['value'],
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+            RsMenuAddonRecipe::insert($rsMenuAddonRecipes);
+
+            DB::commit();
+            return resultFunction("Success to create menu addons", true, $rsMenuAddon);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SM catch: " . $e->getMessage());
+        }
+    }
+
+    public function deleteMenuAddons($id, $companyId) {
+        try {
+            $rsMenuAddon =  RsMenuAddon::find($id);
+            if (!$rsMenuAddon) return resultFunction('Err RR-D: menu addon not found');
+
+            if ($rsMenuAddon->company_id != $companyId) return resultFunction('Err RR-D: menu addon not found');
+            $rsMenuAddon->delete();
+            RsMenuAddonRecipe::where('rs_menu_addon_id', $id)->delete();
+
+            return resultFunction("Success to delete menu addon", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
     }
 }
