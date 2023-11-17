@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Company;
 use App\Models\Recipe;
+use App\Models\RsAddonsCategory;
+use App\Models\RsAddonsCategoryMenu;
 use App\Models\RsCategory;
 use App\Models\RsCoupon;
 use App\Models\RsMenu;
@@ -91,7 +93,7 @@ class RestaurantRepository
 
     public function indexMenu($filters, $companyId)
     {
-        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_menu_addons']);
+        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_addons_category_menus.rs_addons_category.rs_menu_addons']);
         if (!empty($filters['title'])) {
             $rsMenu = $rsMenu->where('title', 'LIKE', '%' . $filters['title'] . '%');
         }
@@ -116,6 +118,7 @@ class RestaurantRepository
                 'title' => 'required',
                 'price' => 'required',
                 'recipes' => 'required',
+                'addons_categories' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code RR-SM: validation err ' . $validator->errors());
             DB::beginTransaction();
@@ -140,6 +143,9 @@ class RestaurantRepository
             $rsMenu->price = $data['price'];
             $rsMenu->save();
 
+            RsMenuRecipe::where('rs_menu_id', $rsMenu->id)->delete();
+            RsAddonsCategoryMenu::where('rs_menu_id', $rsMenu->id)->delete();
+
             $rsMenuRecipes = [];
             foreach ($data['recipes'] as $recip) {
                 $rsMenuRecipes[] = [
@@ -150,6 +156,17 @@ class RestaurantRepository
                 ];
             }
             RsMenuRecipe::insert($rsMenuRecipes);
+
+            $rsAddonsCategoryMenus = [];
+            foreach ($data['addons_categories'] as $addonsCategory) {
+                $rsAddonsCategoryMenus[] = [
+                    'rs_addons_category_id' => $addonsCategory['id'],
+                    'rs_menu_id' => $rsMenu->id,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+            RsAddonsCategoryMenu::insert($rsAddonsCategoryMenus);
 
             DB::commit();
             return resultFunction("Success to create menu", true, $rsMenu);
@@ -415,7 +432,7 @@ class RestaurantRepository
 
     public function indexMenuAddons($filters, $companyId)
     {
-        $rsMenu = RsMenuAddon::with(['rs_menu', 'rs_menu_addon_recipes.recipe']);
+        $rsMenu = RsMenuAddon::with(['rs_addons_category', 'rs_menu_addon_recipes.recipe']);
         if (!empty($filters['title'])) {
             $rsMenu = $rsMenu->where('title', 'LIKE', '%' . $filters['title'] . '%');
         }
@@ -431,7 +448,7 @@ class RestaurantRepository
     {
         try {
             $validator = Validator::make($data, [
-                'menu' => 'required',
+                'addons_category' => 'required',
                 'title' => 'required',
                 'price' => 'required',
                 'recipes' => 'required',
@@ -442,8 +459,8 @@ class RestaurantRepository
             $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code RR-SM: company not found');
 
-            $rsMenu = RsMenu::find($data['menu']['value']);
-            if (!$rsMenu) return resultFunction('Err code RR-SM: menu not found');
+            $rsAddonsCategory = RsAddonsCategory::find($data['addons_category']['value']);
+            if (!$rsAddonsCategory) return resultFunction('Err code RR-SM: menu not found');
 
             if ($data['id']) {
                 $rsMenuAddon = RsMenuAddon::find($data['id']);
@@ -453,7 +470,7 @@ class RestaurantRepository
                 $rsMenuAddon = new RsMenuAddon();
             }
             $rsMenuAddon->company_id = $company->id;
-            $rsMenuAddon->rs_menu_id = $rsMenu->id;
+            $rsMenuAddon->rs_addons_category_id = $rsAddonsCategory->id;
             $rsMenuAddon->title = $data['title'];
             $rsMenuAddon->image = isset($data['image']) ? ($data['image'] ? : '') : '';
             $rsMenuAddon->price = $data['price'];
@@ -489,6 +506,64 @@ class RestaurantRepository
             return resultFunction("Success to delete menu addon", true);
         } catch (\Exception $e) {
             return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function deleteAddonsCategory($id, $companyId) {
+        try {
+            $rsAddonCategory =  RsAddonsCategory::find($id);
+            if (!$rsAddonCategory) return resultFunction('Err RR-D: addon category not found');
+
+            if ($rsAddonCategory->company_id != $companyId) return resultFunction('Err RR-D: addon category not found');
+            $rsAddonCategory->delete();
+
+            return resultFunction("Success to delete addon category", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexAddonsCategory($filters, $companyId)
+    {
+        $rsAddonCategories = RsAddonsCategory::with(['rs_menu_addons_default', 'rs_menu_addons']);
+        $rsAddonCategories = $rsAddonCategories->where('company_id', $companyId);
+        $rsAddonCategories = $rsAddonCategories->orderBy('id', 'desc')->get();
+        return $rsAddonCategories;
+    }
+
+    public function saveAddonsCategory($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'title' => 'required',
+                'description' => 'required',
+                'is_required' => 'required',
+                'allow_multiple' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SC: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SC: company not found');
+
+            if ($data['id']) {
+                $rsAddonsCategory = RsAddonsCategory::find($data['id']);
+                if (!$rsAddonsCategory) return resultFunction("Err code RR-SC: addons category not found");
+            }  else {
+                $rsAddonsCategory = new RsAddonsCategory();
+            }
+            $rsAddonsCategory->company_id = $company->id;
+            $rsAddonsCategory->title = $data['title'];
+            $rsAddonsCategory->description = $data['description'];
+            $rsAddonsCategory->is_required = $data['is_required']['value'];
+            $rsAddonsCategory->allow_multiple = $data['allow_multiple']['value'];
+            if (isset($data['default_value'])) {
+                $rsAddonsCategory->default_value = $data['default_value']['value'];
+            }
+            $rsAddonsCategory->save();
+
+            return resultFunction("Success to create addons category", true, $rsAddonsCategory);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SC catch: " . $e->getMessage());
         }
     }
 }

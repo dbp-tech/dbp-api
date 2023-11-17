@@ -36,4 +36,11 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
         Route::get('/', [RestaurantController::class, 'indexOrder']);
     });
     Route::get('/last-week', [RestaurantController::class, 'lastWeekOrder']);
+
+    Route::group(['prefix' => 'addons-category'], function () {
+        Route::get('/', [RestaurantController::class, 'indexAddonsCategory']);
+        Route::post('/', [RestaurantController::class, 'saveAddonsCategory']);
+        Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteAddonsCategory']);
+        Route::get('/{id?}/detail', [RestaurantController::class, 'detailAddonsCategory']);
+    });
 });

@@ -101,7 +101,7 @@ class RestaurantController extends Controller
 
     public function indexMenuAddons(Request $request)
     {
-        $filters = $request->only(["rs_menu_id", "title", "status"]);
+        $filters = $request->only(["rs_addons_category_id", "title", "status"]);
         return response()->json($this->restaurantRepo->indexMenuAddons($filters, $request->header('company_id')));
     }
 
@@ -121,5 +121,21 @@ class RestaurantController extends Controller
             ->where('createdAt', '>', date("Y-m-d H:i:s", strtotime('-7 days')))
             ->get();
         return count($orderData);
+    }
+
+    public function indexAddonsCategory(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->restaurantRepo->indexAddonsCategory($filters, $request->header('company_id')));
+    }
+
+    public function saveAddonsCategory(Request $request)
+    {
+        return response()->json($this->restaurantRepo->saveAddonsCategory($request->all(), $request->header('company_id')));
+    }
+
+    public function deleteAddonsCategory(Request $request, $id = null)
+    {
+        return response()->json($this->restaurantRepo->deleteAddonsCategory($id, $request->header('company_id')));
     }
 }

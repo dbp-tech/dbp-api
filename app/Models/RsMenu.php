@@ -26,7 +26,7 @@ class RsMenu extends Model
         return $this->hasMany(RsMenuRecipe::class, 'rs_menu_id', 'id');
     }
 
-    public function rs_menu_addons() {
-        return $this->hasMany(RsMenuAddon::class, 'rs_menu_id', 'id');
+    public function rs_addons_category_menus() {
+        return $this->hasMany(RsAddonsCategoryMenu::class, 'rs_menu_id', 'id');
     }
 }
