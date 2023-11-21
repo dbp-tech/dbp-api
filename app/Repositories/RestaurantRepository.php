@@ -277,7 +277,7 @@ class RestaurantRepository
 
             if (count($data['menu_data']) == 0) return resultFunction("Err code RR-SOr: menu data is not found");
 
-            $rsMenus = RsMenu::with(['rs_menu_addons'])
+            $rsMenus = RsMenu::with([])
                 ->whereIn('id', array_column($data['menu_data'], 'menu_id'))
                 ->get();
 
@@ -353,8 +353,9 @@ class RestaurantRepository
 
                 $addonPrice = 0;
                 if (count($dataMenu['addons']) > 0) {
+                    $rsMenuAddons = RsMenuAddon::whereIn('id', array_column($dataMenu['addons'], 'id'))->get();
                     foreach ($dataMenu['addons'] as $addon) {
-                        $menuAddonSelected = $menu->rs_menu_addons->where('id', $addon['id'])->first();
+                        $menuAddonSelected =$rsMenuAddons->where('id', $addon['id'])->first();
                         if (!$menuAddonSelected) return resultFunction("Err code RR-SOr: menu addon not found");
 
                         $rsOrderMenuAddon[] = [
