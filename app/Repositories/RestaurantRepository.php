@@ -281,7 +281,7 @@ class RestaurantRepository
                 ->whereIn('id', array_column($data['menu_data'], 'menu_id'))
                 ->get();
 
-            if (count($data['menu_data']) !== count($rsMenus)) return resultFunction("Err code RR-SOr: the menu data is not same with our db");
+//            if (count($data['menu_data']) !== count($rsMenus)) return resultFunction("Err code RR-SOr: the menu data is not same with our db");
             $isEdit = false;
             if (isset($data['id'])) {
                 $rsOrder = RsOrder::find($data['id']);
