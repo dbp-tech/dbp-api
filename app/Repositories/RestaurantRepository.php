@@ -321,13 +321,13 @@ class RestaurantRepository
             $totalDiscountPrice = 0;
             $totalAddonPrice = 0;
             $rsOrderMenuAddon = [];
-            foreach ($rsMenus as $menu) {
-                $dataMenu = (collect($data['menu_data']))->where('menu_id', $menu->id)->first();
+            foreach ($data['menu_data'] as $menu) {
+                $dataMenu = $rsMenus->where('id', $menu['menu_id'])->first();
                 $discountPrice = 0;
-                $couponData = $couponDbs->where('id', $dataMenu['coupon_id'])->first();
-                if ($dataMenu['coupon_id'] AND !$couponData) return resultFunction("Err code RR-SOr: the coupon data is not found");
+                $couponData = $couponDbs->where('id', $menu['coupon_id'])->first();
+                if ($menu['coupon_id'] AND !$couponData) return resultFunction("Err code RR-SOr: the coupon data is not found");
 
-                $totalPriceQty = $menu->price * $dataMenu['quantity'];
+                $totalPriceQty = $dataMenu->price * $menu['quantity'];
                 if ($couponData) {
                     if ($couponData->coupon_type === 'percentage') {
                         $discountPrice = $couponData->type_value * $totalPriceQty / 100;
@@ -339,11 +339,11 @@ class RestaurantRepository
 
                 $rsOrderMenu = RsOrderMenu::create([
                     "rs_order_id" => $rsOrder->id,
-                    "rs_menu_id" => $menu->id,
-                    "quantity" => $dataMenu['quantity'],
-                    "menu_title" => $menu->title,
+                    "rs_menu_id" => $dataMenu->id,
+                    "quantity" => $menu['quantity'],
+                    "menu_title" => $dataMenu->title,
                     "menu_price" => $totalPriceQty,
-                    "menu_image" => $menu->image,
+                    "menu_image" => $dataMenu->image,
                     "discount_price" => $discountPrice,
                     "total_price" => $totalPriceQty - $discountPrice,
                     "coupon_name" => $couponData ? $couponData->coupon_name : null,
@@ -352,10 +352,10 @@ class RestaurantRepository
                 ]);
 
                 $addonPrice = 0;
-                if (count($dataMenu['addons']) > 0) {
-                    $rsMenuAddons = RsMenuAddon::whereIn('id', array_column($dataMenu['addons'], 'id'))->get();
-                    foreach ($dataMenu['addons'] as $addon) {
-                        $menuAddonSelected =$rsMenuAddons->where('id', $addon['id'])->first();
+                if (count($menu['addons']) > 0) {
+                    $rsMenuAddons = RsMenuAddon::whereIn('id', array_column($menu['addons'], 'id'))->get();
+                    foreach ($menu['addons'] as $addon) {
+                        $menuAddonSelected = $rsMenuAddons->where('id', $addon['id'])->first();
                         if (!$menuAddonSelected) return resultFunction("Err code RR-SOr: menu addon not found");
 
                         $rsOrderMenuAddon[] = [
@@ -364,7 +364,7 @@ class RestaurantRepository
                             "quantity" => $addon['qty'],
                             "addon_title" => $menuAddonSelected->title,
                             "addon_price" => $menuAddonSelected->price,
-                            "addon_image" => $menu->image,
+                            "addon_image" => $dataMenu->image,
                             "createdAt" => date("Y-m-d H:i:s"),
                             "updatedAt" => date("Y-m-d H:i:s")
                         ];
