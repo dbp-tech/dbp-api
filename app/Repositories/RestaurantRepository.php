@@ -456,7 +456,7 @@ class RestaurantRepository
                 'addons_category' => 'required',
                 'title' => 'required',
                 'price' => 'required',
-                'recipes' => 'required',
+//                'recipes' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code RR-SM: validation err ' . $validator->errors());
             DB::beginTransaction();
@@ -481,16 +481,18 @@ class RestaurantRepository
             $rsMenuAddon->price = $data['price'];
             $rsMenuAddon->save();
 
-            $rsMenuAddonRecipes = [];
-            foreach ($data['recipes'] as $recip) {
-                $rsMenuAddonRecipes[] = [
-                    'rs_menu_addon_id' => $rsMenuAddon->id,
-                    'recipe_id' => $recip['value'],
-                    'createdAt' => date("Y-m-d H:i:s"),
-                    'updatedAt' => date("Y-m-d H:i:s")
-                ];
+            if (isset($data['recipes'])) {
+                $rsMenuAddonRecipes = [];
+                foreach ($data['recipes'] as $recip) {
+                    $rsMenuAddonRecipes[] = [
+                        'rs_menu_addon_id' => $rsMenuAddon->id,
+                        'recipe_id' => $recip['value'],
+                        'createdAt' => date("Y-m-d H:i:s"),
+                        'updatedAt' => date("Y-m-d H:i:s")
+                    ];
+                }
+                RsMenuAddonRecipe::insert($rsMenuAddonRecipes);
             }
-            RsMenuAddonRecipe::insert($rsMenuAddonRecipes);
 
             DB::commit();
             return resultFunction("Success to create menu addons", true, $rsMenuAddon);
