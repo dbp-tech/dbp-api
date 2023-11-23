@@ -573,4 +573,72 @@ class RestaurantRepository
             return resultFunction("Err code RR-SC catch: " . $e->getMessage());
         }
     }
+
+    public function countOrder($data, $companyId)
+    {
+        $startDate = "";
+
+        if ($data['type'] === 'custom') {
+            $validator = Validator::make($data, [
+                'start_date' => 'required',
+                'end_date' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-CO: validation err ' . $validator->errors());
+            $startDate = $data['start_date'];
+            $endDate = $data['end_date'];
+        } else {
+            $endDate = date("Y-m-d");
+            if ($data['type'] === 'last_7days') {
+                $startDate = date("Y-m-d", strtotime("-7 days"));
+            } elseif ($data['type'] === 'last_2weeks') {
+                $startDate = date("Y-m-d", strtotime("-14 days"));
+            } elseif ($data['type'] === 'last_month') {
+                $startDate = date("Y-m-d", strtotime("-1 month"));
+            }
+        }
+
+        DB::connection('mysql')->select('SET sql_mode = "";');
+        $query = "
+        SELECT DATE(createdAt) AS order_date,
+               SUM(price_total_final) AS total_price
+        FROM db_master.rs_orders
+        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt < '" . $endDate . " 00:00:00'
+        AND company_id = " . $companyId . "
+        GROUP BY DATE(createdAt);
+            ";
+        $queryData = DB::SELECT($query);
+
+        $queryRight = "
+        WITH RECURSIVE HourlySeries AS (
+          SELECT 0 AS hour_of_day
+          UNION
+          SELECT hour_of_day + 1
+          FROM HourlySeries
+          WHERE hour_of_day < 23
+        )
+        SELECT 
+            HourlySeries.hour_of_day AS order_hour,
+            ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $startDate . "', '" . $endDate . "'), 2) AS avg_order_count_per_day,
+            ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $startDate . "', '" . $endDate . "'), 2) AS avg_total_price_per_day
+        FROM 
+            HourlySeries
+        LEFT JOIN 
+            db_master.rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
+        WHERE 
+            rs_orders.createdAt BETWEEN '" . $startDate . " 00:00:00' AND '" . $endDate . " 23:59:59'
+            AND rs_orders.company_id = " . $companyId . "
+        GROUP BY 
+            HourlySeries.hour_of_day
+        ORDER BY 
+            HourlySeries.hour_of_day;
+            ";
+        $queryRightData = DB::SELECT($queryRight);
+        return resultFunction("", true, [
+            "start_date" => $startDate,
+            "end_date" => $endDate,
+            "type" => $data['type'],
+            "left_data" => $queryData,
+            "right_data" => $queryRightData
+        ]);
+    }
 }
