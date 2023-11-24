@@ -633,11 +633,23 @@ class RestaurantRepository
             HourlySeries.hour_of_day;
             ";
         $queryRightData = DB::SELECT($queryRight);
+
+        $centerQuery = "
+        SELECT DATE(createdAt) AS order_date,
+               SUM(price_total_final) AS total_price
+        FROM db_master.rs_orders
+        WHERE DATE(createdAt) = " . date("d") . "
+              AND company_id = '1'
+        GROUP BY DATE(createdAt);
+        ";
+        $queryCenterData = DB::select($centerQuery);
+
         return resultFunction("", true, [
             "start_date" => $startDate,
             "end_date" => $endDate,
             "type" => $data['type'],
             "left_data" => $queryData,
+            "center_data" => $queryCenterData,
             "right_data" => $queryRightData
         ]);
     }
