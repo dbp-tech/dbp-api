@@ -618,8 +618,8 @@ class RestaurantRepository
         )
         SELECT 
             HourlySeries.hour_of_day AS order_hour,
-            ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $startDate . "', '" . $endDate . "'), 2) AS avg_order_count_per_day,
-            ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $startDate . "', '" . $endDate . "'), 2) AS avg_total_price_per_day
+            ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_order_count_per_day,
+            ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_total_price_per_day
         FROM 
             HourlySeries
         LEFT JOIN 
@@ -638,7 +638,7 @@ class RestaurantRepository
         SELECT DATE(createdAt) AS order_date,
                SUM(price_total_final) AS total_price
         FROM db_master.rs_orders
-        WHERE DATE(createdAt) = " . date("d") . "
+        WHERE DATE(createdAt) = '" . date("Y-m-d") . "'
               AND company_id = '1'
         GROUP BY DATE(createdAt);
         ";
