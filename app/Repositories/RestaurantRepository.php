@@ -602,7 +602,7 @@ class RestaurantRepository
         SELECT DATE(createdAt) AS order_date,
                SUM(price_total_final) AS total_price
         FROM db_master.rs_orders
-        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt < '" . $endDate . " 00:00:00'
+        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
         AND company_id = " . $companyId . "
         GROUP BY DATE(createdAt);
             ";
