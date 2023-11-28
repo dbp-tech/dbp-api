@@ -25,4 +25,8 @@ class RsMenuAddon extends Model
     public function rs_menu_addon_recipes() {
         return $this->hasMany(RsMenuAddonRecipe::class, 'rs_menu_addon_id', 'id');
     }
+
+    public function rs_menu_addon_prices() {
+        return $this->hasMany(RsMenuAddonPrice::class, 'rs_menu_addon_id', 'id');
+    }
 }
