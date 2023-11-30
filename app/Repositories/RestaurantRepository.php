@@ -347,7 +347,7 @@ class RestaurantRepository
                 if ($menu['coupon_id'] AND !$couponData) return resultFunction("Err code RR-SOr: the coupon data is not found");
 
                 $price = $dataMenu->price;
-                if (in_array($data['order_type'], ['gofood', 'shopeefood'])) {
+                if (!in_array($data['order_type'], ['dinein', 'takeaway'])) {
                     foreach ($dataMenu->rs_menu_prices as $rsMenuPrice) {
                         if ($rsMenuPrice->title == $data['order_type']) {
                             $price = $rsMenuPrice->price;
@@ -388,7 +388,7 @@ class RestaurantRepository
                         if (!$menuAddonSelected) return resultFunction("Err code RR-SOr: menu addon not found");
 
                         $price = $menuAddonSelected->price;
-                        if (in_array($data['order_type'], ['gofood', 'shopeefood'])) {
+                        if (!in_array($data['order_type'], ['dinein', 'takeaway'])) {
                             foreach ($menuAddonSelected->rs_menu_addon_prices as $rsMenuAddonPrice) {
                                 if ($rsMenuAddonPrice->title == $data['order_type']) {
                                     $price = $rsMenuAddonPrice->price;
