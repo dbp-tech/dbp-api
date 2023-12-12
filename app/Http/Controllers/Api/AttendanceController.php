@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\AttendanceRepository;
 use Illuminate\Http\Request;
 
-class HrisController extends Controller
+class AttendanceController extends Controller
 {
     protected $attendanceRepo;
 
