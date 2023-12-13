@@ -17,13 +17,14 @@ class AttendanceController extends Controller
 
     public function index(Request $request)
     {
-        return response()->json($this->attendanceRepo->index());
+        $filters = $request->only(["user_uid", "periode"]);
+        return response()->json($this->attendanceRepo->index($filters, $request->header('company_id')));
         // return response()->json('woke');
     }
 
     public function save(Request $request)
     {
-        return response()->json($this->attendanceRepo->save($request->all()));
+        return response()->json($this->attendanceRepo->save($request->all(), $request->header('company_id')));
     }
 
 }
