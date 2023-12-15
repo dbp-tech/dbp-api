@@ -3,17 +3,25 @@
 namespace App\Repositories;
 
 use App\Models\Attendance;
+use App\Models\Company;
 use Illuminate\Support\Facades\Validator;
 
 class AttendanceRepository
 {
-    public function index()
+    public function index($filters, $companyId)
     {
-        $attendance = Attendance::All();
+        $attendance = Attendance::with([]);
+        if (!empty($filters['user_uid'])) {
+            $attendance = $attendance->where('user_uid', 'LIKE', '%' . $filters['user_uid'] . '%');
+        }        
+
+        $attendance = $attendance->where('company_id', $companyId);
+        $attendance = $attendance->orderBy('id', 'desc')->paginate(25);
+
         return $attendance;
     }
 
-    public function save($data)
+    public function save($data, $companyId)
     {
         try {
             $validator = Validator::make($data, [
@@ -27,11 +35,15 @@ class AttendanceRepository
                 'latitude_out' => 'required',
                 'longitude_in' => 'required',
                 'longitude_out' => 'required',
-                'late_count' => 'required'
+                'late_count' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code VR-S: validation err ' . $validator->errors());
 
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code VR-S: company not found');
+
             $attendance = new Attendance();
+            $attendance->company_id = $company->id;
             $attendance->user_uid = $data['user_uid'];
             $attendance->periode = $data['periode'];
             $attendance->clock_in = $data['clock_in'];
