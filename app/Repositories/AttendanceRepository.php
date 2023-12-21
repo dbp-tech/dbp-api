@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Attendance;
 use App\Models\Company;
+use App\Models\User;
+
 use Illuminate\Support\Facades\Validator;
 
 class AttendanceRepository
@@ -28,13 +30,9 @@ class AttendanceRepository
                 'user_uid' => 'required',
                 'periode' => 'required',
                 'clock_in' => 'required',
-                'clock_out' => 'required',
                 'image_in' => 'required',
-                'image_out' => 'required',
                 'latitude_in' => 'required',
-                'latitude_out' => 'required',
                 'longitude_in' => 'required',
-                'longitude_out' => 'required',
                 'late_count' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code VR-S: validation err ' . $validator->errors());
@@ -42,7 +40,17 @@ class AttendanceRepository
             $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code VR-S: company not found');
 
-            $attendance = new Attendance();
+            
+            $attendance = User::where('user_uid', $data['user_uid'])->first();            
+            if (!$attendance) return resultFunction('Err code VR-S: user not found');
+
+            $attendance = Attendance::where('periode', $data['periode'])->first();            
+
+
+            if (!$attendance) {
+                $attendance = new Attendance();
+            }
+
             $attendance->company_id = $company->id;
             $attendance->user_uid = $data['user_uid'];
             $attendance->periode = $data['periode'];
