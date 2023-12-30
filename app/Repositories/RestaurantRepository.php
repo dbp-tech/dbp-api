@@ -720,8 +720,8 @@ class RestaurantRepository
             "left_data" => $queryData,
             "center_data" => $queryCenterData,
             "right_data" => $queryRightData,
-            "payment_type" => $queryPaymentTypeData,
-            "order_type" => $queryOrderTypeData
+            "payment_type_data" => $queryPaymentTypeData,
+            "order_type_data" => $queryOrderTypeData
         ]);
     }
 }
