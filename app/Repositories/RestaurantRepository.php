@@ -691,13 +691,37 @@ class RestaurantRepository
         ";
         $queryCenterData = DB::select($centerQuery);
 
+        $queryPaymentType = "
+        SELECT payment_type,
+               SUM(price_total_final) AS total_price
+        FROM db_master.rs_orders
+        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
+        AND company_id = " . $companyId . "
+        GROUP BY payment_type;
+            ";
+        $queryPaymentTypeData = DB::SELECT($queryPaymentType);
+
+
+        $queryOrderType = "
+        SELECT order_type,
+               SUM(price_total_final) AS total_price
+        FROM db_master.rs_orders
+        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
+        AND company_id = " . $companyId . "
+        GROUP BY order_type;
+            ";
+        $queryOrderTypeData = DB::SELECT($queryOrderType);
+        $i = 0;
+
         return resultFunction("", true, [
             "start_date" => $startDate,
             "end_date" => $endDate,
             "type" => $data['type'],
             "left_data" => $queryData,
             "center_data" => $queryCenterData,
-            "right_data" => $queryRightData
+            "right_data" => $queryRightData,
+            "payment_type" => $queryPaymentTypeData,
+            "order_type" => $queryOrderTypeData
         ]);
     }
 }
