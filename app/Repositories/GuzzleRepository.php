@@ -31,7 +31,7 @@ class GuzzleRepository {
                 $response = $client->request('GET', $endpoint);
             }
             $content = $response->getBody()->getContents();
-            return resultFunction("", true, json_decode($content));
+            return resultFunction("", true, json_decode($content, true));
         } catch (\Exception $e) {
             if ($e->getCode() == 401) {
                 $tokpedTokenCache = $this->createTokenTokped();
@@ -69,7 +69,7 @@ class GuzzleRepository {
     public function createTokenTokped() {
         $headers = [
             'Content-Type' => 'application/json',
-            'Authorization' => "Basic OGJjMGE3YjZkNzg4NDdhYmFlMGM5NjJiMmEwNjIwYjk6ZTkxNWY4Y2IxYmI4NDgzODk5OTY0NGE4ZDhmODliMmY=",
+            'Authorization' => "Basic " . env('TOKPED_TOKEN'),
         ];
         $client = new \GuzzleHttp\Client([
             'headers' => $headers
