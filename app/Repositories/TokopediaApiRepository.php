@@ -288,21 +288,28 @@ class TokopediaApiRepository
             }
 
             if (count($orderHistories) === 0) {
-                $ocStatus = OcStatus::firstOrNew(['order_id' => $data['order_id']]);
-                $ocStatus->store_id = $ocStore->store_id;
-                $ocStatus->status_code = $data['order_status'];
-                $ocStatus->status_description = $this->statusCode($data['order_status']);
-                $ocStatus->save();
+                $ocStatus = OcStatus::with([])->where('order_id', $data['order_id'])->where('status_code', $data['order_status'])->first();
+                if (!$ocStatus) {
+                    $ocStatus = new OcStatus();
+                    $ocStatus->order_id = $data['order_id'];
+                    $ocStatus->store_id = $ocStore->store_id;
+                    $ocStatus->status_code = $data['order_status'];
+                    $ocStatus->status_description = $this->statusCode($data['order_status']);
+                    $ocStatus->save();
+                }
             } else {
                 foreach ($orderHistories as $history) {
-                    $ocStatus = new OcStatus();
-                    $ocStatus->store_id = $ocStore->store_id;
-                    $ocStatus->order_id = $data['order_id'];
-                    $ocStatus->status_code = $history['hist_status_code'];
-                    $ocStatus->status_description = $this->statusCode($history['hist_status_code']);
-                    $ocStatus->createdAt = date("Y-m-d H:i:s", strtotime($history['timestamp']));
-                    $ocStatus->updatedAt = date("Y-m-d H:i:s", strtotime($history['timestamp']));
-                    $ocStatus->save();
+                    $ocStatus = OcStatus::with([])->where('order_id', $data['order_id'])->where('status_code', $history['hist_status_code'])->first();
+                    if (!$ocStatus) {
+                        $ocStatus = new OcStatus();
+                        $ocStatus->store_id = $ocStore->store_id;
+                        $ocStatus->order_id = $data['order_id'];
+                        $ocStatus->status_code = $history['hist_status_code'];
+                        $ocStatus->status_description = $this->statusCode($history['hist_status_code']);
+                        $ocStatus->createdAt = date("Y-m-d H:i:s", strtotime($history['timestamp']));
+                        $ocStatus->updatedAt = date("Y-m-d H:i:s", strtotime($history['timestamp']));
+                        $ocStatus->save();
+                    }
                 }
             }
 
@@ -404,12 +411,15 @@ class TokopediaApiRepository
                 ];
                 $this->webhookOrderNotification($dataSave, array_reverse($orderApiData['order_info']['order_history']));
             } else {
-                $ocStatus = new OcStatus();
-                $ocStatus->store_id = $orderApiData['shop_info']['shop_id'];
-                $ocStatus->order_id = $orderApiData['order_id'];
-                $ocStatus->status_code = $orderApiData['order_status'];
-                $ocStatus->status_description = $this->statusCode($orderApiData['order_status']);
-                $ocStatus->save();
+                $ocStatus = OcStatus::with([])->where('order_id', $orderApiData['order_id'])->where('status_code', $orderApiData['order_status'])->first();
+                if (!$ocStatus) {
+                    $ocStatus = new OcStatus();
+                    $ocStatus->store_id = $orderApiData['shop_info']['shop_id'];
+                    $ocStatus->order_id = $orderApiData['order_id'];
+                    $ocStatus->status_code = $orderApiData['order_status'];
+                    $ocStatus->status_description = $this->statusCode($orderApiData['order_status']);
+                    $ocStatus->save();
+                }
             }
 
             return resultFunction("", true);
