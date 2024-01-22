@@ -6,6 +6,45 @@ namespace App\Repositories;
 use Illuminate\Support\Facades\Cache;
 
 class GuzzleRepository {
+    public function getTiktokToken($tokenOnly = false) {
+        $tiktokCache = Cache::get('tiktok_token');
+        if (!$tiktokCache AND !$tokenOnly) {
+            $refreshUrl = 'https://auth.tiktok-shops.com/api/v2/token/refresh?app_key=' . env('TIKTOK_APP_KEY') . '&app_secret=' . env('TIKTOK_APP_SECRET') . '&refresh_token=ROW_m7lTOAAAAACnoSiSa0danC3PmWPmiXT6WxtXaKcc-rGZyVEFhK3TMF723JDXrd8K0SGLBV3OSh8&grant_type=refresh_token';
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('GET', $refreshUrl);
+            $content = json_decode($response->getBody()->getContents(), true);
+
+            Cache::put('tiktok_token', json_encode($content['data']));
+            $tiktokToken = $content['data']['access_token'];
+        } else {
+            $tiktokCache = json_decode($tiktokCache, true);
+            if ($tiktokCache['access_token_expire_in'] < strtotime(now())) {
+                $tiktokToken = $this->getTiktokToken(true);
+            } else {
+                $tiktokToken = $tiktokCache['access_token'];
+            }
+        }
+        return $tiktokToken;
+    }
+
+    public function signatureAlgorithm($timestamp, $requestPath) {
+        $appSecret = env('TIKTOK_APP_SECRET');
+        $params = [
+            "app_key" => env('TIKTOK_APP_KEY'),
+            "shop_id" => env('TIKTOK_SHOP_ID'),
+            "timestamp" => $timestamp
+        ];
+        $buildQuery = '';
+        foreach ($params as $key => $item) {
+            $buildQuery = $buildQuery . $key . $item;
+        }
+        $stringToSign = $requestPath . $buildQuery;
+
+        $wrappedString = $appSecret . $stringToSign . $appSecret;
+        $sign = hash_hmac('sha256', $wrappedString, $appSecret);
+        return $sign;
+    }
+
     public function getTokpedToken() {
         $tokpedTokenCache = Cache::get('tokped_token');
         if (!$tokpedTokenCache) {
@@ -36,11 +75,11 @@ class GuzzleRepository {
             if ($e->getCode() == 401) {
                 $tokpedTokenCache = $this->createTokenTokped();
                 Cache::put('tokped_token', $tokpedTokenCache);
+                return $this->getData($query, $endpoint);
             }
             return resultFunction("Err code GR-DD catch: " . $e->getMessage());
         }
     }
-
 
     public function getDataPost($body, $endpoint) {
         try {
@@ -61,6 +100,7 @@ class GuzzleRepository {
             if ($e->getCode() == 401) {
                 $tokpedTokenCache = $this->createTokenTokped();
                 Cache::put('tokped_token', $tokpedTokenCache);
+                return $this->getDataPost($body, $endpoint);
             }
             return resultFunction("Err code GR-DD catch: " . $e->getMessage());
         }
