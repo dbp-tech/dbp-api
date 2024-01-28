@@ -4,8 +4,15 @@ namespace App\Repositories;
 
 use App\Models\Company;
 use App\Models\PmCustomField;
+use App\Models\PmDeal;
+use App\Models\PmDealCustomField;
+use App\Models\PmDealProgress;
 use App\Models\PmPipeline;
+use App\Models\PmPipelineCustomField;
+use App\Models\PmStage;
+use App\Models\PmStageCustomField;
 use App\Models\PmType;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ProjectManagementRepository
@@ -65,6 +72,8 @@ class ProjectManagementRepository
     public function savePipeline($data, $companyId)
     {
         try {
+            DB::beginTransaction();
+
             $validator = Validator::make($data, [
                 'pm_type_id' => 'required',
                 'title' => 'required',
@@ -79,6 +88,7 @@ class ProjectManagementRepository
 
             if ($data['id']) {
                 $pmPipeline = PmPipeline::find($data['id']);
+                PmPipelineCustomField::where('pm_pipeline_id', $data['id'])->delete();
             } else {
                 $pmPipeline = new PmPipeline();
             }
@@ -108,6 +118,9 @@ class ProjectManagementRepository
                 $parentPipeline->save();
             }
 
+            $cfs = PmCustomField::whereIn('id', $data['custom_fields'])->get();
+            if (count($cfs) !==  count($data['custom_fields'])) return resultFunction('Err code PMR-S: count of custom fields is not same between request params and database');
+
             $pmPipeline->company_id = $company->id;
             $pmPipeline->pm_type_id = $data['pm_type_id'];
             $pmPipeline->parent_id = $data['parent_id'];
@@ -115,6 +128,21 @@ class ProjectManagementRepository
             $pmPipeline->title = $data['title'];
             $pmPipeline->save();
 
+            $pmPipelineCFs = [];
+            foreach ($data['custom_fields'] as $cf) {
+                $pmPipelineCFs[] = [
+                    'pm_pipeline_id' => $pmPipeline->id,
+                    'pm_custom_field_id' => $cf,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            if (count($pmPipelineCFs) > 0) {
+                PmPipelineCustomField::insert($pmPipelineCFs);
+            }
+
+            DB::commit();
             return resultFunction("Success to create pipeline", true, $pmPipeline);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
@@ -123,7 +151,7 @@ class ProjectManagementRepository
 
     public function indexPipeline($filters, $companyId)
     {
-        $pmPipeline = PmPipeline::with([]);
+        $pmPipeline = PmPipeline::with(['pm_pipeline_custom_fields.pm_custom_field']);
         if (in_array($filters['is_parent'], [0, 1])) {
             $pmPipeline = $pmPipeline->where('is_parent', $filters['is_parent']);
         }
@@ -162,6 +190,7 @@ class ProjectManagementRepository
                 }
             }
 
+            PmPipelineCustomField::where('pm_pipeline_id', $pmPipeline->id)->delete();
             $pmPipeline->delete();
 
             return resultFunction("Success to delete type", true);
@@ -225,6 +254,216 @@ class ProjectManagementRepository
             $pmCF->delete();
 
             return resultFunction("Success to delete custom field", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexStage($filters, $companyId)
+    {
+        $pmStage = PmStage::with(['pm_stage_custom_fields.pm_custom_field', 'pm_pipeline']);
+        $pmStage = $pmStage->where('company_id', $companyId);
+        $pmStage = $pmStage->orderBy('id', 'desc')->paginate(25);
+        return $pmStage;
+    }
+
+    public function saveStage($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pm_pipeline_id' => 'required',
+                'pipeline_index' => 'required',
+                'title' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-S: company not found');
+
+            $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
+            if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
+
+            if ($data['id']) {
+                $pmStage = PmStage::find($data['id']);
+                PmStageCustomField::where('pm_stage_id', $data['id'])->delete();
+            } else {
+                $pmStage = new PmStage();
+            }
+
+            $pmStage->company_id = $company->id;
+            $pmStage->pm_pipeline_id = $data['pm_pipeline_id'];
+            $pmStage->pipeline_index = $data['pipeline_index'];
+            $pmStage->title = $data['title'];
+            $pmStage->save();
+
+            $pmStageCFs = [];
+            foreach ($data['custom_fields'] as $cf) {
+                $pmStageCFs[] = [
+                    'pm_stage_id' => $pmPipeline->id,
+                    'pm_custom_field_id' => $cf,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            if (count($pmStageCFs) > 0) {
+                PmStageCustomField::insert($pmStageCFs);
+            }
+
+            DB::commit();
+            return resultFunction("Success to create stage", true, $pmStage);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
+    public function deleteStage($id, $companyId) {
+        try {
+            DB::beginTransaction();
+            $pmStage =  PmStage::find($id);
+            if (!$pmStage) return resultFunction('Err PMR-D: stage not found');
+
+            if ($pmStage->company_id != $companyId) return resultFunction('Err PMR-D: stage not found');
+
+            PmStageCustomField::where('pm_stage_id', $pmStage->id)->delete();
+            $pmStage->delete();
+
+            DB::commit();
+            return resultFunction("Success to delete type", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function saveDeal($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pm_type_id' => 'required',
+                'title' => 'required',
+                'pm_stage_id' => 'required',
+                'pm_pipeline_id' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-S: company not found');
+
+            $pmStage = PmStage::find($data['pm_stage_id']);
+            if (!$pmStage) return resultFunction('Err code PMR-S: sage not found');
+
+            $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
+            if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
+
+            if ($data['id']) {
+                $pmDeal = PmDeal::find($data['id']);
+                if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
+                PmDealCustomField::where('pm_deal_id', $data['id'])->delete();
+            } else {
+                $pmDeal = new PmDeal();
+            }
+
+            $pmDeal->company_id = $company->id;
+            $pmDeal->pm_type_id = $data['pm_type_id'];
+            $pmDeal->title = $data['title'];
+            $pmDeal->save();
+
+            if (!$data['id']) {
+                $pmDealProgress = new PmDealProgress();
+                $pmDealProgress->company_id =  $companyId;
+                $pmDealProgress->pm_deal_id = $pmDeal->id;
+                $pmDealProgress->pm_stage_id = $data['pm_stage_id'];
+                $pmDealProgress->pm_pipeline_id = $data['pm_pipeline_id'];
+                $pmDealProgress->save();
+            }
+
+            $pmDealCFs = [];
+            foreach ($data['custom_fields'] as $cf) {
+                $pmDealCFs[] = [
+                    'pm_deal_id' => $pmPipeline->id,
+                    'pm_custom_field_id' => $cf,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            if (count($pmDealCFs) > 0) {
+                PmDealCustomField::insert($pmDealCFs);
+            }
+
+            DB::commit();
+            return resultFunction("Success to create deal", true, $pmStage);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
+    public function changeDeal($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'id' => 'required',
+                'pm_stage_id' => 'required',
+                'pm_pipeline_id' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-S: company not found');
+
+            $pmStage = PmStage::find($data['pm_stage_id']);
+            if (!$pmStage) return resultFunction('Err code PMR-S: sage not found');
+
+            $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
+            if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
+
+            $pmDeal = PmDeal::find($data['id']);
+            if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
+
+            PmDealProgress::where('pm_deal_id', $pmDeal->id)->delete();
+
+            $pmDealProgress = new PmDealProgress();
+            $pmDealProgress->company_id =  $companyId;
+            $pmDealProgress->pm_deal_id = $pmDeal->id;
+            $pmDealProgress->pm_stage_id = $data['pm_stage_id'];
+            $pmDealProgress->pm_pipeline_id = $data['pm_pipeline_id'];
+            $pmDealProgress->save();
+
+            DB::commit();
+            return resultFunction("Success to change deal", true, $pmStage);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexDeal($filters, $companyId)
+    {
+        $pmDeal = PmDeal::with(['pm_stage_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage']);
+        $pmDeal = $pmDeal->where('company_id', $companyId);
+        $pmDeal = $pmDeal->orderBy('id', 'desc')->paginate(25);
+        return $pmDeal;
+    }
+
+    public function deleteDeal($id, $companyId) {
+        try {
+            DB::beginTransaction();
+            $pmDeal =  PmDeal::find($id);
+            if (!$pmDeal) return resultFunction('Err PMR-D: deal not found');
+
+            if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-D: deal not found');
+
+            PmDealCustomField::where('pm_deal_id', $pmDeal->id)->delete();
+            PmDealProgress::where('pm_deal_id', $pmDeal->id)->delete();
+            $pmDeal->delete();
+
+            DB::commit();
+            return resultFunction("Success to delete type", true);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-D catch: " . $e->getMessage());
         }

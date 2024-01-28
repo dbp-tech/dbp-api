@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class PmPipeline extends Model
+class PmStage extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,10 +15,14 @@ class PmPipeline extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'pm_pipelines';
+    protected $table = 'pm_stages';
     protected $guarded = [];
 
-    public function pm_pipeline_custom_fields() {
-        return $this->hasMany(PmPipelineCustomField::class, 'pm_pipeline_id', 'id');
+    public function pm_stage_custom_fields() {
+        return $this->hasMany(PmStageCustomField::class, 'pm_stage_id', 'id');
+    }
+
+    public function pm_pipeline() {
+        return $this->hasOne(PmPipeline::class, 'id', 'pm_pipeline_id');
     }
 }

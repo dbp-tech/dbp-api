@@ -62,4 +62,41 @@ class ProjectManagementController extends Controller
     {
         return response()->json($this->pmRepo->deleteCF($id, $request->header('company_id')));
     }
+
+    public function indexStage(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->pmRepo->indexStage($filters, $request->header('company_id')));
+    }
+
+    public function saveStage(Request $request)
+    {
+        return response()->json($this->pmRepo->saveStage($request->all(), $request->header('company_id')));
+    }
+
+    public function deleteStage(Request $request, $id = null)
+    {
+        return response()->json($this->pmRepo->deleteStage($id, $request->header('company_id')));
+    }
+
+    public function saveDeal(Request $request)
+    {
+        return response()->json($this->pmRepo->saveDeal($request->all(), $request->header('company_id')));
+    }
+
+    public function changeDeal(Request $request)
+    {
+        return response()->json($this->pmRepo->changeDeal($request->all(), $request->header('company_id')));
+    }
+
+    public function indexDeal(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->pmRepo->indexDeal($filters, $request->header('company_id')));
+    }
+
+    public function deleteDeal(Request $request, $id = null)
+    {
+        return response()->json($this->pmRepo->deleteDeal($id, $request->header('company_id')));
+    }
 }
