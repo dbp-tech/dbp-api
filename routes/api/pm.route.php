@@ -8,6 +8,7 @@ Route::group(['prefix' => 'pm', "middleware" => "checkCompayDocId"], function ()
         Route::get('/', [ProjectManagementController::class, 'indexType']);
         Route::post('/', [ProjectManagementController::class, 'saveType']);
         Route::delete('/{id?}/delete', [ProjectManagementController::class, 'deleteType']);
+        Route::post('/change-custom-field', [ProjectManagementController::class, 'changeCustomFieldType']);
     });
     Route::group(['prefix' => 'pipeline'], function () {
         Route::get('/', [ProjectManagementController::class, 'indexPipeline']);

@@ -18,8 +18,8 @@ class PmStage extends Model
     protected $table = 'pm_stages';
     protected $guarded = [];
 
-    public function pm_stage_custom_fields() {
-        return $this->hasMany(PmStageCustomField::class, 'pm_stage_id', 'id');
+    public function pm_type() {
+        return $this->hasOne(PmType::class, 'id', 'pm_type_id');
     }
 
     public function pm_pipeline() {

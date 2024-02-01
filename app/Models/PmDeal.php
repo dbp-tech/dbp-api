@@ -18,8 +18,8 @@ class PmDeal extends Model
     protected $table = 'pm_deals';
     protected $guarded = [];
 
-    public function pm_stage_custom_fields() {
-        return $this->hasMany(PmDealCustomField::class, 'pm_deal_id', 'id');
+    public function pm_type() {
+        return $this->hasMany(PmType::class, 'id', 'pm_type_id');
     }
 
     public function pm_deal_progress() {

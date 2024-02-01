@@ -12,6 +12,7 @@ use App\Models\PmPipelineCustomField;
 use App\Models\PmStage;
 use App\Models\PmStageCustomField;
 use App\Models\PmType;
+use App\Models\PmTypeCustomField;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -19,7 +20,7 @@ class ProjectManagementRepository
 {
     public function indexType($filters, $companyId)
     {
-        $pmType = PmType::with([]);
+        $pmType = PmType::with(['pm_type_custom_fields.pm_custom_field']);
         if (!empty($filters['name'])) {
             $pmType = $pmType->where('name', 'LIKE', '%' . $filters['name'] . '%');
         }
@@ -69,6 +70,46 @@ class ProjectManagementRepository
         }
     }
 
+    public function changeCustomFieldType($data)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'pm_type_id' => 'required',
+                'pm_custom_field_ids' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $pmType = PmType::find($data['pm_type_id']);
+            if (!$pmType) return resultFunction('Err code PMR-S: type not found');
+
+            $pmCustomFields = PmCustomField::with([])
+                ->whereIn('id', $data['pm_custom_field_ids'])
+                ->get();
+            if (count($pmCustomFields) !== count($data['pm_custom_field_ids'])) return resultFunction('Err code PMR-S: custom field not match');
+
+            PmTypeCustomField::where('pm_type_id', $data['pm_type_id'])->delete();
+            $pmTypeCustomFieldInput = [];
+            foreach ($data['pm_custom_field_ids'] as $datum) {
+                $pmTypeCustomFieldInput[] = [
+                    'pm_type_id' => $data['pm_type_id'],
+                    'pm_custom_field_id' => $datum,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+            if (count($pmTypeCustomFieldInput) > 0) {
+                PmTypeCustomField::insert($pmTypeCustomFieldInput);
+            }
+
+
+            $pmType = PmType::with(['pm_type_custom_fields.pm_custom_field'])->find($data['pm_type_id']);
+
+            return resultFunction("Success to change custom field type", true, $pmType);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
     public function savePipeline($data, $companyId)
     {
         try {
@@ -88,7 +129,6 @@ class ProjectManagementRepository
 
             if ($data['id']) {
                 $pmPipeline = PmPipeline::find($data['id']);
-                PmPipelineCustomField::where('pm_pipeline_id', $data['id'])->delete();
             } else {
                 $pmPipeline = new PmPipeline();
             }
@@ -128,20 +168,6 @@ class ProjectManagementRepository
             $pmPipeline->title = $data['title'];
             $pmPipeline->save();
 
-            $pmPipelineCFs = [];
-            foreach ($data['custom_fields'] as $cf) {
-                $pmPipelineCFs[] = [
-                    'pm_pipeline_id' => $pmPipeline->id,
-                    'pm_custom_field_id' => $cf,
-                    'createdAt' => date("Y-m-d H:i:s"),
-                    'updatedAt' => date("Y-m-d H:i:s")
-                ];
-            }
-
-            if (count($pmPipelineCFs) > 0) {
-                PmPipelineCustomField::insert($pmPipelineCFs);
-            }
-
             DB::commit();
             return resultFunction("Success to create pipeline", true, $pmPipeline);
         } catch (\Exception $e) {
@@ -151,7 +177,7 @@ class ProjectManagementRepository
 
     public function indexPipeline($filters, $companyId)
     {
-        $pmPipeline = PmPipeline::with(['pm_pipeline_custom_fields.pm_custom_field']);
+        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields.pm_custom_field']);
         if (in_array($filters['is_parent'], [0, 1])) {
             $pmPipeline = $pmPipeline->where('is_parent', $filters['is_parent']);
         }
@@ -261,7 +287,7 @@ class ProjectManagementRepository
 
     public function indexStage($filters, $companyId)
     {
-        $pmStage = PmStage::with(['pm_stage_custom_fields.pm_custom_field', 'pm_pipeline']);
+        $pmStage = PmStage::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_pipeline']);
         $pmStage = $pmStage->where('company_id', $companyId);
         $pmStage = $pmStage->orderBy('id', 'desc')->paginate(25);
         return $pmStage;
@@ -273,6 +299,7 @@ class ProjectManagementRepository
             DB::beginTransaction();
 
             $validator = Validator::make($data, [
+                'pm_type_id' => 'required',
                 'pm_pipeline_id' => 'required',
                 'pipeline_index' => 'required',
                 'title' => 'required',
@@ -285,32 +312,21 @@ class ProjectManagementRepository
             $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
             if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
 
+            $pmType = PmType::find($data['pm_type_id']);
+            if (!$pmType) return resultFunction('Err code PMR-S: type not found');
+
             if ($data['id']) {
                 $pmStage = PmStage::find($data['id']);
-                PmStageCustomField::where('pm_stage_id', $data['id'])->delete();
             } else {
                 $pmStage = new PmStage();
             }
 
             $pmStage->company_id = $company->id;
             $pmStage->pm_pipeline_id = $data['pm_pipeline_id'];
+            $pmStage->pm_type_id = $data['pm_type_id'];
             $pmStage->pipeline_index = $data['pipeline_index'];
             $pmStage->title = $data['title'];
             $pmStage->save();
-
-            $pmStageCFs = [];
-            foreach ($data['custom_fields'] as $cf) {
-                $pmStageCFs[] = [
-                    'pm_stage_id' => $pmPipeline->id,
-                    'pm_custom_field_id' => $cf,
-                    'createdAt' => date("Y-m-d H:i:s"),
-                    'updatedAt' => date("Y-m-d H:i:s")
-                ];
-            }
-
-            if (count($pmStageCFs) > 0) {
-                PmStageCustomField::insert($pmStageCFs);
-            }
 
             DB::commit();
             return resultFunction("Success to create stage", true, $pmStage);
@@ -326,8 +342,6 @@ class ProjectManagementRepository
             if (!$pmStage) return resultFunction('Err PMR-D: stage not found');
 
             if ($pmStage->company_id != $companyId) return resultFunction('Err PMR-D: stage not found');
-
-            PmStageCustomField::where('pm_stage_id', $pmStage->id)->delete();
             $pmStage->delete();
 
             DB::commit();
@@ -362,7 +376,6 @@ class ProjectManagementRepository
             if ($data['id']) {
                 $pmDeal = PmDeal::find($data['id']);
                 if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
-                PmDealCustomField::where('pm_deal_id', $data['id'])->delete();
             } else {
                 $pmDeal = new PmDeal();
             }
@@ -379,20 +392,6 @@ class ProjectManagementRepository
                 $pmDealProgress->pm_stage_id = $data['pm_stage_id'];
                 $pmDealProgress->pm_pipeline_id = $data['pm_pipeline_id'];
                 $pmDealProgress->save();
-            }
-
-            $pmDealCFs = [];
-            foreach ($data['custom_fields'] as $cf) {
-                $pmDealCFs[] = [
-                    'pm_deal_id' => $pmPipeline->id,
-                    'pm_custom_field_id' => $cf,
-                    'createdAt' => date("Y-m-d H:i:s"),
-                    'updatedAt' => date("Y-m-d H:i:s")
-                ];
-            }
-
-            if (count($pmDealCFs) > 0) {
-                PmDealCustomField::insert($pmDealCFs);
             }
 
             DB::commit();
@@ -418,7 +417,7 @@ class ProjectManagementRepository
             if (!$company) return resultFunction('Err code PMR-S: company not found');
 
             $pmStage = PmStage::find($data['pm_stage_id']);
-            if (!$pmStage) return resultFunction('Err code PMR-S: sage not found');
+            if (!$pmStage) return resultFunction('Err code PMR-S: stage not found');
 
             $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
             if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
@@ -444,7 +443,7 @@ class ProjectManagementRepository
 
     public function indexDeal($filters, $companyId)
     {
-        $pmDeal = PmDeal::with(['pm_stage_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage']);
+        $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage']);
         $pmDeal = $pmDeal->where('company_id', $companyId);
         $pmDeal = $pmDeal->orderBy('id', 'desc')->paginate(25);
         return $pmDeal;
@@ -458,7 +457,6 @@ class ProjectManagementRepository
 
             if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-D: deal not found');
 
-            PmDealCustomField::where('pm_deal_id', $pmDeal->id)->delete();
             PmDealProgress::where('pm_deal_id', $pmDeal->id)->delete();
             $pmDeal->delete();
 

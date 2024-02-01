@@ -18,7 +18,7 @@ class PmPipeline extends Model
     protected $table = 'pm_pipelines';
     protected $guarded = [];
 
-    public function pm_pipeline_custom_fields() {
-        return $this->hasMany(PmPipelineCustomField::class, 'pm_pipeline_id', 'id');
+    public function pm_type() {
+        return $this->hasOne(PmType::class, 'id', 'pm_type_id');
     }
 }

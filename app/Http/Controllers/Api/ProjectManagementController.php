@@ -31,6 +31,11 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->deleteType($id, $request->header('company_id')));
     }
 
+    public function changeCustomFieldType(Request $request)
+    {
+        return response()->json($this->pmRepo->changeCustomFieldType($request->all()));
+    }
+
     public function indexPipeline(Request $request)
     {
         $filters = $request->only(["title", "pm_type_id", 'parent_id', 'is_parent']);

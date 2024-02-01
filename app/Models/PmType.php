@@ -17,4 +17,8 @@ class PmType extends Model
     
     protected $table = 'pm_types';
     protected $guarded = [];
+
+    public function pm_type_custom_fields() {
+        return $this->hasMany(PmTypeCustomField::class, 'pm_type_id', 'id');
+    }
 }
