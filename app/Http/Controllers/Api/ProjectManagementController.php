@@ -70,7 +70,7 @@ class ProjectManagementController extends Controller
 
     public function indexStage(Request $request)
     {
-        $filters = $request->only([]);
+        $filters = $request->only(['pm_type_id']);
         return response()->json($this->pmRepo->indexStage($filters, $request->header('company_id')));
     }
 
@@ -96,12 +96,18 @@ class ProjectManagementController extends Controller
 
     public function indexDeal(Request $request)
     {
-        $filters = $request->only([]);
+        $filters = $request->only(['pm_type_id']);
         return response()->json($this->pmRepo->indexDeal($filters, $request->header('company_id')));
     }
 
     public function deleteDeal(Request $request, $id = null)
     {
         return response()->json($this->pmRepo->deleteDeal($id, $request->header('company_id')));
+    }
+
+    public function kanbanBoardDeal(Request $request)
+    {
+        $filters = $request->only(['pm_pipeline_id']);
+        return response()->json($this->pmRepo->kanbanBoardDeal($filters, $request->header('company_id')));
     }
 }

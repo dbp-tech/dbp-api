@@ -25,4 +25,8 @@ class PmDealProgress extends Model
     public function pm_stage() {
         return $this->hasOne(PmStage::class, 'id', 'pm_stage_id');
     }
+
+    public function pm_deal() {
+        return $this->hasOne(PmDeal::class, 'id', 'pm_deal_id');
+    }
 }

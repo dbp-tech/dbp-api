@@ -181,6 +181,9 @@ class ProjectManagementRepository
         if (in_array($filters['is_parent'], [0, 1])) {
             $pmPipeline = $pmPipeline->where('is_parent', $filters['is_parent']);
         }
+        if (!empty($filters['pm_type_id'])) {
+            $pmPipeline = $pmPipeline->where('pm_type_id', $filters['pm_type_id']);
+        }
         if (!empty($filters['parent_id'])) {
             $pmPipeline = $pmPipeline->where('parent_id', $filters['parent_id']);
         }
@@ -289,6 +292,9 @@ class ProjectManagementRepository
     {
         $pmStage = PmStage::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_pipeline']);
         $pmStage = $pmStage->where('company_id', $companyId);
+        if (!empty($filters['pm_type_id'])) {
+            $pmStage = $pmStage->where('pm_type_id', $filters['pm_type_id']);
+        }
         $pmStage = $pmStage->orderBy('id', 'desc')->paginate(25);
         return $pmStage;
     }
@@ -445,6 +451,9 @@ class ProjectManagementRepository
     {
         $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage']);
         $pmDeal = $pmDeal->where('company_id', $companyId);
+        if (!empty($filters['pm_type_id'])) {
+            $pmDeal = $pmDeal->where('pm_type_id', $filters['pm_type_id']);
+        }
         $pmDeal = $pmDeal->orderBy('id', 'desc')->paginate(25);
         return $pmDeal;
     }
@@ -465,5 +474,39 @@ class ProjectManagementRepository
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-D catch: " . $e->getMessage());
         }
+    }
+
+    public function kanbanBoardDeal($filters, $companyId)
+    {
+        $pmDealProgress = PmDealProgress::with(['pm_stage', 'pm_deal']);
+        $pmDealProgress = $pmDealProgress->where('company_id', $companyId);
+        $pmDealProgress = $pmDealProgress->where('pm_pipeline_id', $filters['pm_pipeline_id']);
+        $pmDealProgress = $pmDealProgress->get();
+
+        $pmStages = PmStage::with([])
+            ->where('pm_pipeline_id', $filters['pm_pipeline_id'])
+            ->get();
+
+        $pmStageOutput = [];
+        foreach ($pmStages as $pmStage) {
+            $pmStageOutput[] = [
+                'headerText' => $pmStage->title,
+                'keyField' => $pmStage->id
+            ];
+        }
+
+        $pipelineData = [];
+        foreach ($pmDealProgress as $dealProgress) {
+            $pipelineData[] = [
+                'Id' => $dealProgress->pm_deal_id,
+                'Status' => $dealProgress->pm_stage_id,
+                'Summary' => $dealProgress->pm_deal->title,
+
+            ];
+        }
+        return [
+            'stages' => $pmStageOutput,
+            'pipelineData' => $pipelineData
+        ];
     }
 }
