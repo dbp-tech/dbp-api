@@ -385,25 +385,32 @@ class ProjectManagementRepository
             $checkIndex = collect($data["stage"])->pluck('index');
             if($checkIndex->count() != $checkIndex->unique()->count()) return resultFunction('Err code PMR-UBS: Index must be unique');
 
-            $pipelineId = $data["pipeline_id"];
-            collect($data["stage"])->each(function($q) use($companyId, $pipelineId) {
-                $pmStage = PmStage::where([
-                    ['id', $q["stage_id"]],
-                    ['pm_pipeline_id', $pipelineId],
-                    ['company_id', $companyId]
-                ])
-                ->first();
 
-                if (!$pmStage) return resultFunction('Err PMR-UBS: stage not found');
-            });
+            // Check if the indices are sequential without any gaps
+            $checkSortIndex = collect($data["stage"])->pluck('index')->sort()->values();
+            if( $checkSortIndex->count() === $checkSortIndex->unique()->count() && $checkSortIndex->count() === $checkSortIndex->last() && $checkSortIndex->first() === 1) {
+                
+                $pipelineId = $data["pipeline_id"];
+                collect($data["stage"])->each(function($q) use($companyId, $pipelineId) {
+                    $pmStage = PmStage::where([
+                        ['id', $q["stage_id"]],
+                        ['pm_pipeline_id', $pipelineId],
+                        ['company_id', $companyId]
+                    ])
+                    ->first();
 
-            foreach($data["stage"] as $stage) {
-                PmStage::where("id", $stage["stage_id"])->update(['pipeline_index' => $stage["index"]]);
+                    if (!$pmStage) return resultFunction('Err PMR-UBS: stage not found');
+                });
+
+                foreach($data["stage"] as $stage) {
+                    PmStage::where("id", $stage["stage_id"])->update(['pipeline_index' => $stage["index"]]);
+                }
+
+                DB::commit();
+
+                return resultFunction("Success to update stage", true);
             }
-
-            DB::commit();
-
-            return resultFunction("Success to update stage", true);
+            return resultFunction('Err code PMR-UBS: Index must be sort');
         } catch (\Exception $e) {
             DB::rollBack();
             return resultFunction("Err code PMR-UBS catch: " . $e->getMessage());
