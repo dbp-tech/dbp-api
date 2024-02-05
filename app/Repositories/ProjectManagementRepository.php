@@ -197,7 +197,7 @@ class ProjectManagementRepository
 
     public function detailPipeline($id, $companyId) {
         try {
-            $pmPipeline = PmPipeline::with(['pm_type', 'pm_type.pm_type_custom_fields', 'pm_stages', 'pm_stages'])->find($id);
+            $pmPipeline = PmPipeline::with(['pm_type', 'pm_type.pm_type_custom_fields', 'pm_type.pm_type_custom_fields.pm_custom_field',  'pm_stages', 'pm_stages'])->find($id);
             if (!$pmPipeline) return resultFunction('Err PMR-DP: pipeline not found');
 
             if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DP: pipeline not found');
@@ -389,7 +389,7 @@ class ProjectManagementRepository
             // Check if the indices are sequential without any gaps
             $checkSortIndex = collect($data["stage"])->pluck('index')->sort()->values();
             if( $checkSortIndex->count() === $checkSortIndex->unique()->count() && $checkSortIndex->count() === $checkSortIndex->last() && $checkSortIndex->first() === 1) {
-                
+
                 $pipelineId = $data["pipeline_id"];
                 collect($data["stage"])->each(function($q) use($companyId, $pipelineId) {
                     $pmStage = PmStage::where([
