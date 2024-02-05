@@ -368,6 +368,48 @@ class ProjectManagementRepository
         }
     }
 
+    public function updateBulkStage($data, $companyId) {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pipeline_id' => 'required|exists:pm_pipelines,id',
+                'stage' => 'required|array',
+                'stage.*.stage_id' => 'required|exists:pm_stages,id',
+                'stage.*.index' => 'required|integer'
+            ]);
+
+            if ($validator->fails()) return resultFunction('Err code PMR-UBS: validation err ' . $validator->errors());
+
+            // Check index must be unique
+            $checkIndex = collect($data["stage"])->pluck('index');
+            if($checkIndex->count() != $checkIndex->unique()->count()) return resultFunction('Err code PMR-UBS: Index must be unique');
+
+            $pipelineId = $data["pipeline_id"];
+            collect($data["stage"])->each(function($q) use($companyId, $pipelineId) {
+                $pmStage = PmStage::where([
+                    ['id', $q["stage_id"]],
+                    ['pm_pipeline_id', $pipelineId],
+                    ['company_id', $companyId]
+                ])
+                ->first();
+
+                if (!$pmStage) return resultFunction('Err PMR-UBS: stage not found');
+            });
+
+            foreach($data["stage"] as $stage) {
+                PmStage::where("id", $stage["stage_id"])->update(['pipeline_index' => $stage["index"]]);
+            }
+
+            DB::commit();
+
+            return resultFunction("Success to update stage", true);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return resultFunction("Err code PMR-UBS catch: " . $e->getMessage());
+        }
+    }
+
     public function deleteStage($id, $companyId) {
         try {
             DB::beginTransaction();

@@ -24,6 +24,7 @@ Route::group(['prefix' => 'pm', "middleware" => "checkCompayDocId"], function ()
     Route::group(['prefix' => 'stage'], function () {
         Route::get('/', [ProjectManagementController::class, 'indexStage']);
         Route::post('/', [ProjectManagementController::class, 'saveStage']);
+        Route::post('/update', [ProjectManagementController::class , 'updateBulkStage']);
         Route::get('/{id?}/detail', [ProjectManagementController::class, 'detailStage']);
         Route::delete('/{id?}/delete', [ProjectManagementController::class, 'deleteStage']);
     });

@@ -87,6 +87,10 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->saveStage($request->all(), $request->header('company_id')));
     }
 
+    public function updateBulkStage(Request $request) {
+        return response()->json($this->pmRepo->updateBulkStage($request->all(), $request->header('company_id')));
+    }
+
     public function deleteStage(Request $request, $id = null)
     {
         return response()->json($this->pmRepo->deleteStage($id, $request->header('company_id')));
