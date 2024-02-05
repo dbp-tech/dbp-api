@@ -177,7 +177,7 @@ class ProjectManagementRepository
 
     public function indexPipeline($filters, $companyId)
     {
-        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields.pm_custom_field']);
+        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_stages']);
         if (in_array($filters['is_parent'], [0, 1])) {
             $pmPipeline = $pmPipeline->where('is_parent', $filters['is_parent']);
         }
@@ -193,6 +193,19 @@ class ProjectManagementRepository
         $pmPipeline = $pmPipeline->where('company_id', $companyId);
         $pmPipeline = $pmPipeline->orderBy('id', 'desc')->paginate(25);
         return $pmPipeline;
+    }
+
+    public function detailPipeline($id, $companyId) {
+        try {
+            $pmPipeline = PmPipeline::with(['pm_type', 'pm_type.pm_type_custom_fields', 'pm_stages', 'pm_stages'])->find($id);
+            if (!$pmPipeline) return resultFunction('Err PMR-DP: pipeline not found');
+
+            if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DP: pipeline not found');
+
+            return resultFunction("Success to get detail Pipeline", true, $pmPipeline);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-DP catch: " . $e->getMessage());
+        }
     }
 
     public function deletePipeline($id, $companyId) {
@@ -298,6 +311,20 @@ class ProjectManagementRepository
         $pmStage = $pmStage->orderBy('id', 'desc')->paginate(25);
         return $pmStage;
     }
+
+    public function detailStage($id, $companyId) {
+        try {
+            $pmPipeline = PmStage::with(['pm_type', 'pm_type.pm_type_custom_fields', 'pm_pipeline'])->find($id);
+            if (!$pmPipeline) return resultFunction('Err PMR-DS: Stage not found');
+
+            if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DS: stage not found');
+
+            return resultFunction("Success to get detail stage", true, $pmPipeline);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-DS catch: " . $e->getMessage());
+        }
+    }
+
 
     public function saveStage($data, $companyId)
     {
@@ -456,6 +483,19 @@ class ProjectManagementRepository
         }
         $pmDeal = $pmDeal->orderBy('id', 'desc')->paginate(25);
         return $pmDeal;
+    }
+
+    public function detailDeal($id, $companyId) {
+        try {
+            $pmPipeline = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage'])->find($id);
+            if (!$pmPipeline) return resultFunction('Err PMR-DD: deal not found');
+
+            if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
+
+            return resultFunction("Success to get detail deal", true, $pmPipeline);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-DD catch: " . $e->getMessage());
+        }
     }
 
     public function deleteDeal($id, $companyId) {

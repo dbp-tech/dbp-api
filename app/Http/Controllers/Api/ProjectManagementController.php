@@ -42,6 +42,10 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->indexPipeline($filters, $request->header('company_id')));
     }
 
+    public function detailPipeline(Request $request, $id = null) {
+        return response()->json($this->pmRepo->detailPipeline($id, $request->header('company_id')));
+    }
+
     public function savePipeline(Request $request)
     {
         return response()->json($this->pmRepo->savePipeline($request->all(), $request->header('company_id')));
@@ -74,6 +78,10 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->indexStage($filters, $request->header('company_id')));
     }
 
+    public function detailStage(Request $request, $id = null) {
+        return response()->json($this->pmRepo->detailStage($id, $request->header('company_id')));
+    }
+
     public function saveStage(Request $request)
     {
         return response()->json($this->pmRepo->saveStage($request->all(), $request->header('company_id')));
@@ -98,6 +106,10 @@ class ProjectManagementController extends Controller
     {
         $filters = $request->only(['pm_type_id']);
         return response()->json($this->pmRepo->indexDeal($filters, $request->header('company_id')));
+    }
+
+    public function detailDeal(Request $request, $id = null) {
+        return response()->json($this->pmRepo->detailDeal($id, $request->header('company_id')));
     }
 
     public function deleteDeal(Request $request, $id = null)

@@ -212,12 +212,12 @@ class RestaurantRepository
 
     public function detailMenu($id, $companyId) {
         try {
-            $rsMenu =  RsMenu::with(['rs_category', 'rs_menu_recipes.recipt', 'rs_menu_prices'])->find($id);
+            $rsMenu =  RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_menu_prices'])->find($id);
             if (!$rsMenu) return resultFunction('Err RR-D: menu not found');
 
             if ($rsMenu->company_id != $companyId) return resultFunction('Err RR-D: menu not found');
 
-            return resultFunction("Success to delete menu", true, $rsMenu);
+            return resultFunction("Success to get detail menu", true, $rsMenu);
         } catch (\Exception $e) {
             return resultFunction("Err code RR-D catch: " . $e->getMessage());
         }
@@ -663,20 +663,20 @@ class RestaurantRepository
           FROM HourlySeries
           WHERE hour_of_day < 23
         )
-        SELECT 
+        SELECT
             HourlySeries.hour_of_day AS order_hour,
             ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_order_count_per_day,
             ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_total_price_per_day
-        FROM 
+        FROM
             HourlySeries
-        LEFT JOIN 
+        LEFT JOIN
             db_master.rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
-        WHERE 
+        WHERE
             rs_orders.createdAt BETWEEN '" . $startDate . " 00:00:00' AND '" . $endDate . " 23:59:59'
             AND rs_orders.company_id = " . $companyId . "
-        GROUP BY 
+        GROUP BY
             HourlySeries.hour_of_day
-        ORDER BY 
+        ORDER BY
             HourlySeries.hour_of_day;
             ";
         $queryRightData = DB::SELECT($queryRight);

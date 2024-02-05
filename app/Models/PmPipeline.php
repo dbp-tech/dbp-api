@@ -14,11 +14,15 @@ class PmPipeline extends Model
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
-    
+
     protected $table = 'pm_pipelines';
     protected $guarded = [];
 
     public function pm_type() {
         return $this->hasOne(PmType::class, 'id', 'pm_type_id');
+    }
+
+    public function pm_stages() {
+        return $this->hasMany(PmStage::class, 'pm_pipeline_id', 'id');
     }
 }
