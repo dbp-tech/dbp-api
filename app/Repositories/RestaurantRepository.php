@@ -634,6 +634,7 @@ class RestaurantRepository
             $startDate = $data['start_date'];
             $endDate = $data['end_date'];
         } else {
+            $startDate = date("Y-m-d", strtotime("-1 days"));
             $endDate = date("Y-m-d");
             if ($data['type'] === 'last_7days') {
                 $startDate = date("Y-m-d", strtotime("-7 days"));
@@ -648,7 +649,7 @@ class RestaurantRepository
         $query = "
         SELECT DATE(createdAt) AS order_date,
                SUM(price_total_final) AS total_price
-        FROM db_master.rs_orders
+        FROM rs_orders
         WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
         AND company_id = " . $companyId . "
         GROUP BY DATE(createdAt);
@@ -670,7 +671,7 @@ class RestaurantRepository
         FROM
             HourlySeries
         LEFT JOIN
-            db_master.rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
+            rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
         WHERE
             rs_orders.createdAt BETWEEN '" . $startDate . " 00:00:00' AND '" . $endDate . " 23:59:59'
             AND rs_orders.company_id = " . $companyId . "
@@ -684,7 +685,7 @@ class RestaurantRepository
         $centerQuery = "
         SELECT DATE(createdAt) AS order_date,
                SUM(price_total_final) AS total_price
-        FROM db_master.rs_orders
+        FROM rs_orders
         WHERE DATE(createdAt) = '" . date("Y-m-d") . "'
               AND company_id = '1'
         GROUP BY DATE(createdAt);
@@ -694,7 +695,7 @@ class RestaurantRepository
         $queryPaymentType = "
         SELECT payment_type,
                SUM(price_total_final) AS total_price
-        FROM db_master.rs_orders
+        FROM rs_orders
         WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
         AND company_id = " . $companyId . "
         GROUP BY payment_type;
@@ -705,13 +706,31 @@ class RestaurantRepository
         $queryOrderType = "
         SELECT order_type,
                SUM(price_total_final) AS total_price
-        FROM db_master.rs_orders
+        FROM rs_orders
         WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
         AND company_id = " . $companyId . "
         GROUP BY order_type;
             ";
         $queryOrderTypeData = DB::SELECT($queryOrderType);
         $i = 0;
+
+
+        $queryTotalMenuSales = "
+        SELECT
+            rom.menu_title,
+            SUM(rom.quantity) as total_buys,
+            SUM(rom.menu_price) as total_price
+        FROM rs_orders ro
+            LEFT JOIN rs_order_menus rom ON rom.rs_order_id = ro.id
+        WHERE
+            ro.createdAt >= '" . $startDate . " 00:00:00' AND ro.createdAt <= '" . $endDate . " 23:59:59'
+                AND
+            ro.company_id = " . $companyId . "
+        GROUP BY rom.menu_title
+        ORDER BY total_buys DESC
+        ";
+
+        $queryTotalMenuSalesData = DB::SELECT($queryTotalMenuSales);
 
         return resultFunction("", true, [
             "start_date" => $startDate,
@@ -721,7 +740,8 @@ class RestaurantRepository
             "center_data" => $queryCenterData,
             "right_data" => $queryRightData,
             "payment_type_data" => $queryPaymentTypeData,
-            "order_type_data" => $queryOrderTypeData
+            "order_type_data" => $queryOrderTypeData,
+            "total_menu_sales" => $queryTotalMenuSalesData
         ]);
     }
 }
