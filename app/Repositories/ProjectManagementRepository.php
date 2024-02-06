@@ -567,6 +567,8 @@ class ProjectManagementRepository
 
     public function kanbanBoardDeal($filters, $companyId)
     {
+        $pmPipeline = PmPipeline::find($filters['pm_pipeline_id']);
+
         $pmDealProgress = PmDealProgress::with(['pm_stage', 'pm_deal']);
         $pmDealProgress = $pmDealProgress->where('company_id', $companyId);
         $pmDealProgress = $pmDealProgress->where('pm_pipeline_id', $filters['pm_pipeline_id']);
@@ -574,6 +576,7 @@ class ProjectManagementRepository
 
         $pmStages = PmStage::with([])
             ->where('pm_pipeline_id', $filters['pm_pipeline_id'])
+            ->orderBy('pm_pipeline_id')
             ->get();
 
         $pmStageOutput = [];
@@ -595,7 +598,8 @@ class ProjectManagementRepository
         }
         return [
             'stages' => $pmStageOutput,
-            'pipelineData' => $pipelineData
+            'pipelineData' => $pipelineData,
+            'pipelineDetail' => $pmPipeline
         ];
     }
 }
