@@ -18,6 +18,7 @@ use App\Models\RsOrder;
 use App\Models\RsOrderMenu;
 use App\Models\RsOrderMenuAddon;
 use App\Models\RsOutlet;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -624,6 +625,10 @@ class RestaurantRepository
     public function countOrder($data, $companyId)
     {
         $startDate = "";
+        $reportType = $data["report"] ?? "all";
+        $dataType = $data["type"] ?? "";
+        $cacheKey = 'countOrder_' . $dataType . "_" . $reportType . "_" . $companyId;
+        $cacheTimeout = now()->addMinutes(5);
 
         if ($data['type'] === 'custom') {
             $validator = Validator::make($data, [
@@ -633,6 +638,7 @@ class RestaurantRepository
             if ($validator->fails()) return resultFunction('Err code RR-CO: validation err ' . $validator->errors());
             $startDate = $data['start_date'];
             $endDate = $data['end_date'];
+            $cacheKey = 'countOrder_' . $dataType . "_" . $reportType . "_" . $companyId. "_" . $startDate . "_" . $endDate;
         } else {
             $startDate = date("Y-m-d", strtotime("-1 days"));
             $endDate = date("Y-m-d");
@@ -645,103 +651,138 @@ class RestaurantRepository
             }
         }
 
+        // Check data has cache or not
+        if(Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
         DB::connection('mysql')->select('SET sql_mode = "";');
-        $query = "
-        SELECT DATE(createdAt) AS order_date,
-               SUM(price_total_final) AS total_price
-        FROM rs_orders
-        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . date("Y-m-d", strtotime("-1 days")) . " 23:59:59'
-        AND company_id = " . $companyId . "
-        GROUP BY DATE(createdAt);
-            ";
-        $queryData = DB::SELECT($query);
 
-        $queryRight = "
-        WITH RECURSIVE HourlySeries AS (
-          SELECT 0 AS hour_of_day
-          UNION
-          SELECT hour_of_day + 1
-          FROM HourlySeries
-          WHERE hour_of_day < 23
-        )
-        SELECT
-            HourlySeries.hour_of_day AS order_hour,
-            ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_order_count_per_day,
-            ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_total_price_per_day
-        FROM
-            HourlySeries
-        LEFT JOIN
-            rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
-        WHERE
-            rs_orders.createdAt BETWEEN '" . $startDate . " 00:00:00' AND '" . $endDate . " 23:59:59'
-            AND rs_orders.company_id = " . $companyId . "
-        GROUP BY
-            HourlySeries.hour_of_day
-        ORDER BY
-            HourlySeries.hour_of_day;
-            ";
-        $queryRightData = DB::SELECT($queryRight);
-
-        $centerQuery = "
-        SELECT DATE(createdAt) AS order_date,
-               SUM(price_total_final) AS total_price
-        FROM rs_orders
-        WHERE DATE(createdAt) = '" . date("Y-m-d") . "'
-              AND company_id = '1'
-        GROUP BY DATE(createdAt);
-        ";
-        $queryCenterData = DB::select($centerQuery);
-
-        $queryPaymentType = "
-        SELECT payment_type,
-               SUM(price_total_final) AS total_price
-        FROM rs_orders
-        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
-        AND company_id = " . $companyId . "
-        GROUP BY payment_type;
-            ";
-        $queryPaymentTypeData = DB::SELECT($queryPaymentType);
-
-
-        $queryOrderType = "
-        SELECT order_type,
-               SUM(price_total_final) AS total_price
-        FROM rs_orders
-        WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
-        AND company_id = " . $companyId . "
-        GROUP BY order_type;
-            ";
-        $queryOrderTypeData = DB::SELECT($queryOrderType);
-        $i = 0;
-
-
-        $queryTotalMenuSales = "
-        SELECT
-            rom.menu_title,
-            SUM(rom.quantity) as total_buys,
-            SUM(rom.menu_price) as total_price
-        FROM rs_orders ro
-            LEFT JOIN rs_order_menus rom ON rom.rs_order_id = ro.id
-        WHERE
-            ro.createdAt >= '" . $startDate . " 00:00:00' AND ro.createdAt <= '" . $endDate . " 23:59:59'
-                AND
-            ro.company_id = " . $companyId . "
-        GROUP BY rom.menu_title
-        ORDER BY total_buys DESC
-        ";
-
-        $queryTotalMenuSalesData = DB::SELECT($queryTotalMenuSales);
-
-        return resultFunction("", true, [
-            "start_date" => $startDate,
-            "end_date" => $endDate,
-            "type" => $data['type'],
-            "left_data" => $queryData,
-            "center_data" => $queryCenterData,
-            "right_data" => $queryRightData,
-            "payment_type_data" => $queryPaymentTypeData,
-            "order_type_data" => $queryOrderTypeData,
-            "total_menu_sales" => $queryTotalMenuSalesData
+        $validator = Validator::make($data, [
+            'report' => 'nullable|in:left_data,center_data,right_data,payment_type_data,order_type_data,total_menu_sales',
         ]);
+
+        if ($validator->fails()) return resultFunction('Err code RR-CO: validation report type ' . $validator->errors());
+
+        // Get query by report type
+        $query = $this->queryCountOrderByReport($reportType, $startDate, $endDate, $companyId);
+        if($query) {
+            $queryData = DB::select($query);
+
+            return Cache::remember($cacheKey, $cacheTimeout, function() use($startDate, $endDate, $dataType, $reportType, $queryData) {
+                return resultFunction("", true, [
+                    "start_date" => $startDate,
+                    "end_date" => $endDate,
+                    "type" => $dataType,
+                    $reportType => $queryData
+                ]);
+            });
+        }
+
+        return Cache::remember($cacheKey, $cacheTimeout, function() use($startDate, $endDate, $dataType, $companyId) {
+            return resultFunction("", true, [
+                "start_date" => $startDate,
+                "end_date" => $endDate,
+                "type" => $dataType,
+                "left_data" => DB::select($this->queryCountOrderByReport("left_data", $startDate, $endDate, $companyId)) ?? [],
+                "center_data" => DB::select($this->queryCountOrderByReport("center_data", $startDate, $endDate, $companyId)) ?? [],
+                "right_data" => DB::select($this->queryCountOrderByReport("right_data", $startDate, $endDate, $companyId)) ?? [],
+                "payment_type_data" => DB::select($this->queryCountOrderByReport("payment_type_data", $startDate, $endDate, $companyId)) ?? [],
+                "order_type_data" => DB::select($this->queryCountOrderByReport("order_type_data", $startDate, $endDate, $companyId)) ?? [],
+                "total_menu_sales" => DB::select($this->queryCountOrderByReport("total_menu_sales", $startDate, $endDate, $companyId)) ?? []
+            ]);
+        });
+    }
+
+    public function queryCountOrderByReport($reportType, $startDate, $endDate, $companyId) {
+        switch ($reportType) {
+            case 'left_data':
+                $query = "
+                    SELECT DATE(createdAt) AS order_date,
+                        SUM(price_total_final) AS total_price
+                    FROM rs_orders
+                    WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . date("Y-m-d", strtotime("-1 days")) . " 23:59:59'
+                    AND company_id = " . $companyId . "
+                    GROUP BY DATE(createdAt);
+                ";
+                break;
+            case 'right_data':
+                $query = "
+                    WITH RECURSIVE HourlySeries AS (
+                    SELECT 0 AS hour_of_day
+                    UNION
+                    SELECT hour_of_day + 1
+                    FROM HourlySeries
+                    WHERE hour_of_day < 23
+                    )
+                    SELECT
+                        HourlySeries.hour_of_day AS order_hour,
+                        ROUND(COALESCE(COUNT(rs_orders.id), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_order_count_per_day,
+                        ROUND(COALESCE(SUM(rs_orders.price_total), 0) / DATEDIFF('" . $endDate . "', '" . $startDate . "'), 2) AS avg_total_price_per_day
+                    FROM
+                        HourlySeries
+                    LEFT JOIN
+                        rs_orders ON HourlySeries.hour_of_day = EXTRACT(HOUR FROM rs_orders.createdAt)
+                    WHERE
+                        rs_orders.createdAt BETWEEN '" . $startDate . " 00:00:00' AND '" . $endDate . " 23:59:59'
+                        AND rs_orders.company_id = " . $companyId . "
+                    GROUP BY
+                        HourlySeries.hour_of_day
+                    ORDER BY
+                        HourlySeries.hour_of_day;
+                ";
+                break;
+            case 'center_data':
+                $query = "
+                    SELECT DATE(createdAt) AS order_date,
+                            SUM(price_total_final) AS total_price
+                    FROM rs_orders
+                    WHERE DATE(createdAt) = '" . date("Y-m-d") . "'
+                        AND company_id = ". $companyId . "
+                    GROUP BY DATE(createdAt);
+                ";
+                break;
+            case 'payment_type_data':
+                $query = "
+                    SELECT payment_type,
+                            SUM(price_total_final) AS total_price
+                    FROM rs_orders
+                    WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
+                    AND company_id = " . $companyId . "
+                    GROUP BY payment_type;
+                ";
+                break;
+            case 'order_type_data':
+                $query = "
+                    SELECT order_type,
+                            SUM(price_total_final) AS total_price
+                    FROM rs_orders
+                    WHERE createdAt >= '" . $startDate . " 00:00:00' AND createdAt <= '" . $endDate . " 23:59:59'
+                    AND company_id = " . $companyId . "
+                    GROUP BY order_type;
+                ";
+                break;
+            case 'total_menu_sales':
+                $query = "
+                    SELECT
+                        rom.menu_title,
+                        SUM(rom.quantity) as total_buys,
+                        SUM(rom.menu_price) as total_price
+                    FROM rs_orders ro
+                        LEFT JOIN rs_order_menus rom ON rom.rs_order_id = ro.id
+                    WHERE
+                        ro.createdAt >= '" . $startDate . " 00:00:00' AND ro.createdAt <= '" . $endDate . " 23:59:59'
+                            AND
+                        ro.company_id = " . $companyId . "
+                    GROUP BY rom.menu_title
+                    ORDER BY total_buys DESC
+                ";
+                break;
+            default:
+                $query = false;
+                break;
+        }
+
+        return $query;
     }
 }
