@@ -580,7 +580,7 @@ class ProjectManagementRepository
             ->get();
 
         $pmStageOutput = [];
-        foreach ($pmStages as $pmStage) {
+        foreach (collect($pmStages)->sortBy("pipeline_index") as $pmStage) {
             $pmStageOutput[] = [
                 'headerText' => $pmStage->title,
                 'keyField' => $pmStage->id
