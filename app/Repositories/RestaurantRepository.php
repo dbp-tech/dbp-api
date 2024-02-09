@@ -771,11 +771,12 @@ class RestaurantRepository
                     FROM rs_orders ro
                         LEFT JOIN rs_order_menus rom ON rom.rs_order_id = ro.id
                     WHERE
-                        ro.createdAt >= '" . $startDate . " 00:00:00' AND ro.createdAt <= '" . $endDate . " 23:59:59'
+                        rom.createdAt >= '" . $startDate . " 00:00:00' AND rom.createdAt <= '" . $endDate . " 23:59:59'
                             AND
                         ro.company_id = " . $companyId . "
                     GROUP BY rom.menu_title
                     ORDER BY total_buys DESC
+                    LIMIT 10
                 ";
                 break;
             default:
