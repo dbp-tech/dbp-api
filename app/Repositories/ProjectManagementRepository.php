@@ -465,6 +465,8 @@ class ProjectManagementRepository
             $pmDeal->company_id = $company->id;
             $pmDeal->pm_type_id = $data['pm_type_id'];
             $pmDeal->title = $data['title'];
+            if ($data['start_date']) $pmDeal->start_date = $data['start_date'];
+            if ($data['end_date']) $pmDeal->end_date = $data['end_date'];
             $pmDeal->save();
 
             if (!$data['id']) {
@@ -477,7 +479,7 @@ class ProjectManagementRepository
             }
 
             DB::commit();
-            return resultFunction("Success to create deal", true, $pmStage);
+            return resultFunction("Success to create deal", true, $pmDeal);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
         }
@@ -523,6 +525,47 @@ class ProjectManagementRepository
         }
     }
 
+    public function formSubmitDeal($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pm_deal_id' => 'required',
+                'custom_fields' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-S: company not found');
+
+            $pmDeal = PmDeal::find($data['pm_deal_id']);
+            if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
+
+            PmDealCustomField::where('pm_deal_id', $pmDeal->id)->delete();
+
+            $pmDealCF = [];
+            foreach ($data['custom_fields'] as $custom_field) {
+                $pmDealCF[] = [
+                    'pm_deal_id' => $pmDeal->id,
+                    'pm_type_id' => $custom_field['pm_type_id'],
+                    'pm_custom_field_id' => $custom_field['id'],
+                    'from' => $custom_field['from'],
+                    'answer' => $custom_field['answer'],
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            PmDealCustomField::insert($pmDealCF);
+
+            DB::commit();
+            return resultFunction("Success to change deal", true, '');
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
     public function indexDeal($filters, $companyId)
     {
         $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage']);
@@ -536,15 +579,82 @@ class ProjectManagementRepository
 
     public function detailDeal($id, $companyId) {
         try {
-            $pmPipeline = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_progress.pm_pipeline', 'pm_deal_progress.pm_stage'])->find($id);
-            if (!$pmPipeline) return resultFunction('Err PMR-DD: deal not found');
+            $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field',
+                'pm_deal_progress.pm_pipeline.pm_type.pm_type_custom_fields.pm_custom_field',
+                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field'])->find($id);
+            if (!$pmDeal) return resultFunction('Err PMR-DD: deal not found');
 
-            if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
+            if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
 
-            return resultFunction("Success to get detail deal", true, $pmPipeline);
+            $pmCustomFields = [];
+            if ($pmDeal->pm_deal_progress) {
+                if ($pmDeal->pm_deal_progress->pm_pipeline) {
+                    if ($pmDeal->pm_deal_progress->pm_pipeline->pm_type) {
+                        foreach ($pmDeal->pm_deal_progress->pm_pipeline->pm_type->pm_type_custom_fields as $custom_field) {
+                            if ($custom_field->pm_custom_field) {
+                                $answer = PmDealCustomField::with([])
+                                    ->where('pm_deal_id', $pmDeal->id)
+                                    ->where('pm_type_id', $custom_field->pm_type_id)
+                                    ->where('pm_custom_field_id', $custom_field->pm_custom_field_id)
+                                    ->where('from', 'pipeline')
+                                    ->first();
+                                $pmCustomFields = $this->setReturnCustomField($custom_field, $pmCustomFields, 'pipeline', $answer);
+                            }
+                        }
+                    }
+                }
+                if ($pmDeal->pm_deal_progress->pm_stage) {
+                    if ($pmDeal->pm_deal_progress->pm_stage->pm_type) {
+                        foreach ($pmDeal->pm_deal_progress->pm_stage->pm_type->pm_type_custom_fields as $custom_field) {
+                            if ($custom_field->pm_custom_field) {
+                                $answer = PmDealCustomField::with([])
+                                    ->where('pm_deal_id', $pmDeal->id)
+                                    ->where('pm_type_id', $custom_field->pm_type_id)
+                                    ->where('pm_custom_field_id', $custom_field->pm_custom_field_id)
+                                    ->where('from', 'pipeline')
+                                    ->first();
+                                $pmCustomFields = $this->setReturnCustomField($custom_field, $pmCustomFields, 'stage', $answer);
+                            }
+                        }
+                    }
+
+                }
+            }
+            if ($pmDeal->pm_type) {
+                foreach ($pmDeal->pm_type->pm_type_custom_fields as $custom_field) {
+                    if ($custom_field->pm_custom_field) {
+                        $answer = PmDealCustomField::with([])
+                            ->where('pm_deal_id', $pmDeal->id)
+                            ->where('pm_type_id', $custom_field->pm_type_id)
+                            ->where('pm_custom_field_id', $custom_field->pm_custom_field_id)
+                            ->where('from', 'pipeline')
+                            ->first();
+                        $pmCustomFields = $this->setReturnCustomField($custom_field, $pmCustomFields, 'deal', $answer);
+                    }
+                }
+            }
+            $pmDeal->pm_custom_fields = $pmCustomFields;
+
+            return resultFunction("Success to get detail deal", true, $pmDeal);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-DD catch: " . $e->getMessage());
         }
+    }
+
+    public function setReturnCustomField($custom_field, $pmCustomFields, $type, $answer) {
+        $pmCF = $custom_field->pm_custom_field;
+        $pmCustomFields[] = [
+            'id' => $pmCF->id,
+            'from' => $type,
+            'pm_type_id' => $custom_field->pm_type_id,
+            'type' => $pmCF->type,
+            'label' => $pmCF->label,
+            'input_type' => $pmCF->input_type,
+            'is_required' => $pmCF->is_required,
+            'option_default' => $pmCF->option_default,
+            'answer' => $answer
+        ];
+        return $pmCustomFields;
     }
 
     public function deleteDeal($id, $companyId) {

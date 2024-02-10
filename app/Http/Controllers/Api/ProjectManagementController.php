@@ -106,6 +106,11 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->changeDeal($request->all(), $request->header('company_id')));
     }
 
+    public function formSubmitDeal(Request $request)
+    {
+        return response()->json($this->pmRepo->formSubmitDeal($request->all(), $request->header('company_id')));
+    }
+
     public function indexDeal(Request $request)
     {
         $filters = $request->only(['pm_type_id']);
