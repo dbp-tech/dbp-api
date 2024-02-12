@@ -34,6 +34,7 @@ class ProjectManagementRepository
         try {
             $validator = Validator::make($data, [
                 'name' => 'required',
+                'type' => 'required'
             ]);
             if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
 
@@ -43,14 +44,27 @@ class ProjectManagementRepository
             if ($data['id']) {
                 $pmType = PmType::find($data['id']);
                 if (!$pmType) return resultFunction('Err code PMR-S: type not found');
+
+                if ($pmType->type !== $data['type']) {
+                    if ($pmType->type === 'pm_pipelines') {
+                        if ($pmType->pm_pipeline)  return resultFunction('Err code PMR-S: pm type is not editable, it has already use on pm_pipeline');
+                    }
+                    if ($pmType->type === 'pm_stages') {
+                        if ($pmType->pm_stage)  return resultFunction('Err code PMR-S: pm type is not editable, it has already use on pm_stage');
+                    }
+                    if ($pmType->type === 'pm_deals') {
+                        if ($pmType->pm_deal)  return resultFunction('Err code PMR-S: pm type is not editable, it has already use on pm_deals');
+                    }
+                }
             } else {
                 $pmType = new PmType();
             }
             $pmType->company_id = $company->id;
             $pmType->name = $data['name'];
+            $pmType->type = $data['type'];
             $pmType->save();
 
-            return resultFunction("Success to create type", true, $pmType);
+            return resultFunction("Success to " . ($data['id'] ? "update" : "create") . " type", true, $pmType);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
         }
@@ -127,8 +141,11 @@ class ProjectManagementRepository
             $pmType = PmType::find($data['pm_type_id']);
             if (!$pmType) return resultFunction('Err code PMR-S: type not found');
 
+            if ($pmType->type !== 'pm_pipelines') return resultFunction('Err code PMR-S: type of pm_types (' . $pmType->type . ') is not suitable with pm_pipelines');
+
             if ($data['id']) {
                 $pmPipeline = PmPipeline::find($data['id']);
+                if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
             } else {
                 $pmPipeline = new PmPipeline();
             }
@@ -169,7 +186,7 @@ class ProjectManagementRepository
             $pmPipeline->save();
 
             DB::commit();
-            return resultFunction("Success to create pipeline", true, $pmPipeline);
+            return resultFunction("Success to " . ($data['id'] ? "update" : "create") . " pm_pipelines", true, $pmPipeline);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
         }
@@ -231,8 +248,6 @@ class ProjectManagementRepository
                     $oldPipeline->save();
                 }
             }
-
-            PmPipelineCustomField::where('pm_pipeline_id', $pmPipeline->id)->delete();
             $pmPipeline->delete();
 
             return resultFunction("Success to delete type", true);
@@ -348,8 +363,11 @@ class ProjectManagementRepository
             $pmType = PmType::find($data['pm_type_id']);
             if (!$pmType) return resultFunction('Err code PMR-S: type not found');
 
+            if ($pmType->type !== 'pm_stages') return resultFunction('Err code PMR-S: type of pm_types (' . $pmType->type . ') is not suitable with pm_stages');
+
             if ($data['id']) {
                 $pmStage = PmStage::find($data['id']);
+                if (!$pmStage) return resultFunction('Err code PMR-S: stage not found');
             } else {
                 $pmStage = new PmStage();
             }
@@ -362,7 +380,7 @@ class ProjectManagementRepository
             $pmStage->save();
 
             DB::commit();
-            return resultFunction("Success to create stage", true, $pmStage);
+            return resultFunction("Success to " . ($data['id'] ? "update" : "create") . " pm_stages", true, $pmStage);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
         }
@@ -455,6 +473,11 @@ class ProjectManagementRepository
             $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
             if (!$pmPipeline) return resultFunction('Err code PMR-S: pipeline not found');
 
+            $pmType = PmType::find($data['pm_type_id']);
+            if (!$pmType) return resultFunction('Err code PMR-S: type not found');
+
+            if ($pmType->type !== 'pm_deals') return resultFunction('Err code PMR-S: type of pm_types (' . $pmType->type . ') is not suitable with pm_deals');
+
             if ($data['id']) {
                 $pmDeal = PmDeal::find($data['id']);
                 if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
@@ -479,7 +502,7 @@ class ProjectManagementRepository
             }
 
             DB::commit();
-            return resultFunction("Success to create deal", true, $pmDeal);
+            return resultFunction("Success to " . ($data['id'] ? "update" : "create") . " pm_deals", true, $pmDeal);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
         }
