@@ -12,7 +12,12 @@ class OcOrder extends Model
 
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
-    
+
     protected $table = 'oc_orders';
     protected $guarded = [];
+
+    public function oc_store()
+    {
+        return $this->belongsTo(OcStore::class, 'store_id', 'store_id');
+    }
 }
