@@ -175,9 +175,6 @@ class ProjectManagementRepository
                 $parentPipeline->save();
             }
 
-            $cfs = PmCustomField::whereIn('id', $data['custom_fields'])->get();
-            if (count($cfs) !==  count($data['custom_fields'])) return resultFunction('Err code PMR-S: count of custom fields is not same between request params and database');
-
             $pmPipeline->company_id = $company->id;
             $pmPipeline->pm_type_id = $data['pm_type_id'];
             $pmPipeline->parent_id = $data['parent_id'];
