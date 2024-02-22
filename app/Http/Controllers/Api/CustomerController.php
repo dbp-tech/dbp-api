@@ -62,4 +62,12 @@ class CustomerController extends Controller {
     public function detail($id) {
         return $this->customerRepo->detail($id);
     }
+
+    public function index(Request $request) {
+        $customers = Customer::with(['company'])
+            ->where('company_id', $request->header('company_id'));
+
+        $customers = $customers->paginate(50);
+        return $customers;
+    }
 }

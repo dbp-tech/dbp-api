@@ -21,4 +21,8 @@ class Customer extends Model
     public function customer_recipes() {
         return $this->hasMany(CustomerRecipe::class, 'customer_id', 'id');
     }
+
+    public function company() {
+        return $this->hasOne(Company::class, 'id', 'company_id');
+    }
 }
