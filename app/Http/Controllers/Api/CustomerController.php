@@ -70,4 +70,12 @@ class CustomerController extends Controller {
         $customers = $customers->paginate(50);
         return $customers;
     }
+
+    public function testSignIn(Request $request) {
+        return $this->customerRepo->testSignIn($request->all());
+    }
+
+    public function testAuth(Request $request) {
+        return $this->customerRepo->testAuth($request->header('customer_id'));
+    }
 }

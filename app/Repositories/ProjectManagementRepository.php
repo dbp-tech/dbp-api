@@ -723,6 +723,8 @@ class ProjectManagementRepository
                 'Id' => $dealProgress->pm_deal_id,
                 'Status' => $dealProgress->pm_stage_id,
                 'Summary' => $dealProgress->pm_deal->title,
+                'StartDate' => $dealProgress->pm_deal->start_date,
+                'EndDate' => $dealProgress->pm_deal->end_date,
                 'createdAt' => $dealProgress->createdAt,
                 'updatedAt' => $dealProgress->updatedAt
             ];

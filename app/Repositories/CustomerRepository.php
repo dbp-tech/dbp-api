@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerRecipe;
 use App\Models\Recipe;
 use Illuminate\Support\Facades\Validator;
+use Firebase\JWT\JWT;
 
 class CustomerRepository {
     public function delete($id) {
@@ -110,5 +111,35 @@ class CustomerRepository {
         } catch (\Exception $e) {
             return resultFunction("Err code CR-De catch: " . $e->getMessage());
         }
+    }
+
+    public function testSignIn($data) {
+        try {
+            $validator = Validator::make($data, [
+                'email' => 'required',
+                'password' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code CR-TA: validation err ' . $validator->errors());
+
+            $customer = Customer::with([])
+                ->where('email', $data['email'])
+                ->first();
+            if (!$customer) return resultFunction("Err code CR-TA: customer not found");
+
+            $key = env('JWT_SECRET');
+            $payload = [
+                "id" => $customer->id
+            ];
+            $jwt = JWT::encode($payload, $key, 'HS256');
+            setcookie('access_token_dbp_web', $jwt, time() + (86400 * 30), "/");
+
+            return resultFunction("Sign in success", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code CR-TA catch: " . $e->getMessage());
+        }
+    }
+
+    public function testAuth($customerId) {
+        return resultFunction("Auth success " . $customerId, true);
     }
 }
