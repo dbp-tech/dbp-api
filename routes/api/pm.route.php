@@ -36,5 +36,9 @@ Route::group(['prefix' => 'pm', "middleware" => "checkCompayDocId"], function ()
         Route::get('/{id?}/detail', [ProjectManagementController::class, 'detailDeal']);
         Route::get('/kanban-board', [ProjectManagementController::class, 'kanbanBoardDeal']);
         Route::post('/form-submit', [ProjectManagementController::class, 'formSubmitDeal']);
+
+        Route::group(['prefix' => 'comment'], function () {
+            Route::post('/', [ProjectManagementController::class, 'saveComment']);
+        });
     });
 });

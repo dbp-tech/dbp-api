@@ -25,4 +25,8 @@ class PmDeal extends Model
     public function pm_deal_progress() {
         return $this->hasOne(PmDealProgress::class, 'pm_deal_id', 'id');
     }
+
+    public function pm_deal_comments() {
+        return $this->hasMany(PmDealComment::class, 'pm_deal_id', 'id');
+    }
 }

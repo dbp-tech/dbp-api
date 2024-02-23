@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Company;
 use App\Models\PmCustomField;
 use App\Models\PmDeal;
+use App\Models\PmDealComment;
 use App\Models\PmDealCustomField;
 use App\Models\PmDealProgress;
 use App\Models\PmPipeline;
@@ -13,6 +14,7 @@ use App\Models\PmStage;
 use App\Models\PmStageCustomField;
 use App\Models\PmType;
 use App\Models\PmTypeCustomField;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -487,6 +489,15 @@ class ProjectManagementRepository
             $pmDeal->title = $data['title'];
             if ($data['start_date']) $pmDeal->start_date = $data['start_date'];
             if ($data['end_date']) $pmDeal->end_date = $data['end_date'];
+            if ($data['description']) $pmDeal->description = $data['description'];
+            if ($data['owner']) {
+                $userOwner = User::find($data['owner']);
+                if (!$userOwner) return resultFunction("Err code PMR-S: user owner not found");
+
+                $pmDeal->owner = $data['owner'];
+            }
+            if ($data['watcher']) $pmDeal->watcher = $data['watcher'];
+            if ($data['file_upload']) $pmDeal->file_upload = $data['file_upload'];
             $pmDeal->save();
 
             if (!$data['id']) {
@@ -601,7 +612,7 @@ class ProjectManagementRepository
         try {
             $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field',
                 'pm_deal_progress.pm_pipeline.pm_type.pm_type_custom_fields.pm_custom_field',
-                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field'])->find($id);
+                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_comments'])->find($id);
             if (!$pmDeal) return resultFunction('Err PMR-DD: deal not found');
 
             if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
@@ -734,5 +745,39 @@ class ProjectManagementRepository
             'pipelineData' => $pipelineData,
             'pipelineDetail' => $pmPipeline
         ];
+    }
+
+    public function saveComment($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pm_deal_id' => 'required',
+                'title' => 'required',
+                'created_by' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-S: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-S: company not found');
+
+            $pmDeal = PmDeal::find($data['pm_deal_id']);
+            if (!$pmDeal) return resultFunction('Err code PMR-S: deal not found');
+
+            $createdBy = User::find($data['created_by']);
+            if (!$createdBy) return resultFunction('Err code PMR-S: user not found');
+
+            $pmDealComment = new PmDealComment();
+            $pmDealComment->pm_deal_id = $pmDeal->id;
+            $pmDealComment->created_by = $createdBy->id;
+            $pmDealComment->title = $data['title'];
+            $pmDealComment->save();
+            DB::commit();
+
+            return resultFunction("Create pm_deal_comments successfully", true, $pmDealComment);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
     }
 }

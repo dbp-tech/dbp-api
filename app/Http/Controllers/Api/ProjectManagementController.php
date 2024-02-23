@@ -131,4 +131,9 @@ class ProjectManagementController extends Controller
         $filters = $request->only(['pm_pipeline_id']);
         return response()->json($this->pmRepo->kanbanBoardDeal($filters, $request->header('company_id')));
     }
+
+    public function saveComment(Request $request)
+    {
+        return response()->json($this->pmRepo->saveComment($request->all(), $request->header('company_id')));
+    }
 }
