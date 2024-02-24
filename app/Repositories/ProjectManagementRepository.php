@@ -496,8 +496,8 @@ class ProjectManagementRepository
 
                 $pmDeal->owner = $data['owner'];
             }
-            if ($data['watcher']) $pmDeal->watcher = $data['watcher'];
-            if ($data['file_upload']) $pmDeal->file_upload = $data['file_upload'];
+            if ($data['watcher']) $pmDeal->watcher = count($data['watcher']) ? json_encode($data['watcher']) : "[]";
+            if ($data['file_upload']) $pmDeal->file_upload = count($data['file_upload']) ? json_encode($data['file_upload']) : "[]";
             $pmDeal->save();
 
             if (!$data['id']) {
@@ -730,12 +730,31 @@ class ProjectManagementRepository
 
         $pipelineData = [];
         foreach ($pmDealProgress as $dealProgress) {
+            $owner = null;
+            if ($dealProgress->pm_deal->owner) $owner = User::find($dealProgress->pm_deal->owner);
+
+            $watchers = [];
+            if ($dealProgress->pm_deal->watcher) {
+                if ($dealProgress->pm_deal->watcher) {
+                    $watcherDb = json_decode($dealProgress->pm_deal->watcher, true);
+                    $userIds = array_unique(array_column($watcherDb, 'user_id'));
+                    if (count($userIds) > 0) {
+                        $watchers = User::with([])
+                            ->whereIn('id', $userIds)
+                            ->get();
+                    }
+                }
+            }
             $pipelineData[] = [
                 'Id' => $dealProgress->pm_deal_id,
                 'Status' => $dealProgress->pm_stage_id,
                 'Summary' => $dealProgress->pm_deal->title,
                 'StartDate' => $dealProgress->pm_deal->start_date,
                 'EndDate' => $dealProgress->pm_deal->end_date,
+                'Owner' => $owner,
+                'Description' => $dealProgress->pm_deal->description,
+                'FileUpload' => json_decode($dealProgress->pm_deal->file_upload),
+                'Watcher' => $watchers,
                 'createdAt' => $dealProgress->createdAt,
                 'updatedAt' => $dealProgress->updatedAt
             ];
