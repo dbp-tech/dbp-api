@@ -182,6 +182,7 @@ class ProjectManagementRepository
             $pmPipeline->parent_id = $data['parent_id'];
             $pmPipeline->is_parent = 0;
             $pmPipeline->title = $data['title'];
+            if ($data['watcher']) $pmPipeline->watcher = count($data['watcher']) ? json_encode($data['watcher']) : "[]";
             $pmPipeline->save();
 
             DB::commit();
@@ -217,6 +218,14 @@ class ProjectManagementRepository
             if (!$pmPipeline) return resultFunction('Err PMR-DP: pipeline not found');
 
             if ($pmPipeline->company_id != $companyId) return resultFunction('Err PMR-DP: pipeline not found');
+
+            $defaultWatcher = [];
+            if ($pmPipeline->watcher) {
+                if ($pmPipeline->watcher != '[]') {
+                    $defaultWatcher = json_decode($pmPipeline->watcher, true);
+                }
+            }
+            $pmPipeline->watcher = $defaultWatcher;
 
             return resultFunction("Success to get detail Pipeline", true, $pmPipeline);
         } catch (\Exception $e) {
@@ -755,6 +764,9 @@ class ProjectManagementRepository
                 'Description' => $dealProgress->pm_deal->description,
                 'FileUpload' => json_decode($dealProgress->pm_deal->file_upload),
                 'Watcher' => $watchers,
+                'PmPipelineId' => $dealProgress->pm_pipeline_id,
+                'PmStageId' => $dealProgress->pm_stage_id,
+                'PmTypeId' => $dealProgress->pm_deal->pm_type_id,
                 'createdAt' => $dealProgress->createdAt,
                 'updatedAt' => $dealProgress->updatedAt
             ];
