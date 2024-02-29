@@ -51,6 +51,11 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->savePipeline($request->all(), $request->header('company_id')));
     }
 
+    public function assignUserPipeline(Request $request)
+    {
+        return response()->json($this->pmRepo->assignUserPipeline($request->all()));
+    }
+
     public function deletePipeline(Request $request, $id = null)
     {
         return response()->json($this->pmRepo->deletePipeline($id, $request->header('company_id')));

@@ -14,10 +14,13 @@ use App\Models\RsMenuAddonPrice;
 use App\Models\RsMenuAddonRecipe;
 use App\Models\RsMenuPrice;
 use App\Models\RsMenuRecipe;
+use App\Models\RsMenuStation;
 use App\Models\RsOrder;
 use App\Models\RsOrderMenu;
 use App\Models\RsOrderMenuAddon;
 use App\Models\RsOutlet;
+use App\Models\RsOutletStation;
+use App\Models\RsStation;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -96,7 +99,8 @@ class RestaurantRepository
 
     public function indexMenu($filters, $companyId)
     {
-        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_addons_category_menus.rs_addons_category.rs_menu_addons', 'rs_menu_prices']);
+        $rsMenu = RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_addons_category_menus.rs_addons_category.rs_menu_addons',
+            'rs_menu_prices', 'rs_menu_station.rs_station']);
         if (!empty($filters['title'])) {
             $rsMenu = $rsMenu->where('title', 'LIKE', '%' . $filters['title'] . '%');
         }
@@ -213,7 +217,7 @@ class RestaurantRepository
 
     public function detailMenu($id, $companyId) {
         try {
-            $rsMenu =  RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_menu_prices'])->find($id);
+            $rsMenu =  RsMenu::with(['rs_category', 'rs_menu_recipes.recipe', 'rs_menu_prices', 'rs_menu_station.rs_station'])->find($id);
             if (!$rsMenu) return resultFunction('Err RR-D: menu not found');
 
             if ($rsMenu->company_id != $companyId) return resultFunction('Err RR-D: menu not found');
@@ -226,7 +230,7 @@ class RestaurantRepository
 
     public function indexOutlet($filters, $companyId)
     {
-        $rsOutlets = RsOutlet::with([]);
+        $rsOutlets = RsOutlet::with(['rs_outlet_stations.rs_station']);
         $rsOutlets = $rsOutlets->where('company_id', $companyId);
         $rsOutlets = $rsOutlets->orderBy('id', 'desc')->get();
         return $rsOutlets;
@@ -785,5 +789,137 @@ class RestaurantRepository
         }
 
         return $query;
+    }
+
+    public function indexStation($filters, $companyId)
+    {
+        $rsStations = RsStation::with([]);
+        if (!empty($filters['title'])) {
+            $rsStations = $rsStations->where('title', 'LIKE', '%' . $filters['title'] . '%');
+        }
+        $rsStations = $rsStations->where('company_id', $companyId);
+        $rsStations = $rsStations->orderBy('id', 'desc')->get();
+        return $rsStations;
+    }
+
+    public function saveStation($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'title' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SS: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SS: company not found');
+
+            if ($data['id']) {
+                $rsStation = RsStation::find($data['id']);
+                if (!$rsStation) return resultFunction("Err code RR-SS: station not found");
+            }  else {
+                $rsStation = new RsStation();
+            }
+            $rsStation->company_id = $company->id;
+            $rsStation->title = $data['title'];
+            $rsStation->save();
+
+            return resultFunction("Success to " . ($data['id'] ? 'update ' : 'create ') . " station", true, $rsStation);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SS catch: " . $e->getMessage());
+        }
+    }
+
+    public function deleteStation($id, $companyId) {
+        try {
+            $rsStation =  RsStation::find($id);
+            if (!$rsStation) return resultFunction('Err RR-D: restaurant station not found');
+
+            if ($rsStation->company_id != $companyId) return resultFunction('Err RR-D: station not found');
+            $rsStation->delete();
+
+            return resultFunction("Success to delete restaurant station", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function detailStation($id, $companyId) {
+        try {
+            $rsStation =  RsStation::with(['rs_menu_stations.rs_menu', 'rs_outlet_stations.rs_outlet'])->find($id);
+            if (!$rsStation) return resultFunction('Err RR-D: restaurant station not found');
+
+            if ($rsStation->company_id != $companyId) return resultFunction('Err RR-D: station not found');
+
+            return resultFunction("", true, $rsStation);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-D catch: " . $e->getMessage());
+        }
+    }
+
+    public function assignMenuToStation($data)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'rs_menu_id' => 'required',
+                'rs_station_id' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-AMS: validation err ' . $validator->errors());
+
+            $station = RsStation::find($data['rs_station_id']);
+            if (!$station) return resultFunction("Err code RR-AMS: station not found");
+
+            $rsMenu = RsMenu::find($data['rs_menu_id']);
+            if (!$rsMenu) return resultFunction("Err code RR-AMS: menu not found");
+
+            $rsMenuStation = RsMenuStation::with([])
+                ->where('rs_menu_id', $data['rs_menu_id'])
+                ->first();
+
+            if (!$rsMenuStation) {
+                $rsMenuStation = new RsMenuStation();
+                $rsMenuStation->rs_menu_id = $data['rs_menu_id'];
+            }
+
+            $rsMenuStation->rs_station_id = $data['rs_station_id'];
+            $rsMenuStation->save();
+
+            return resultFunction("Successfully assigning station to menu ", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-AMS catch: " . $e->getMessage());
+        }
+    }
+
+    public function assignOutletToStation($data)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'rs_outlet_id' => 'required',
+                'rs_station_id' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-AOS: validation err ' . $validator->errors());
+
+            $station = RsStation::find($data['rs_station_id']);
+            if (!$station) return resultFunction("Err code RR-AOS: station not found");
+
+            $rsOutlet = RsOutlet::find($data['rs_outlet_id']);
+            if (!$rsOutlet) return resultFunction("Err code RR-AOS: outlet not found");
+
+            $rsOutletStation = RsOutletStation::with([])
+                ->where('rs_outlet_id', $data['rs_outlet_id'])
+                ->where('rs_station_id', $data['rs_station_id'])
+                ->first();
+
+            if (!$rsOutletStation) {
+                $rsOutletStation = new RsOutletStation();
+            }
+
+            $rsOutletStation->rs_outlet_id = $data['rs_outlet_id'];
+            $rsOutletStation->rs_station_id = $data['rs_station_id'];
+            $rsOutletStation->save();
+
+            return resultFunction("Successfully assigning station to outlet ", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-AOS catch: " . $e->getMessage());
+        }
     }
 }

@@ -33,4 +33,8 @@ class RsMenu extends Model
     public function rs_addons_category_menus() {
         return $this->hasMany(RsAddonsCategoryMenu::class, 'rs_menu_id', 'id');
     }
+
+    public function rs_menu_station() {
+        return $this->hasOne(RsMenuStation::class, 'rs_menu_id', 'id');
+    }
 }

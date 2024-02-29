@@ -10,6 +10,7 @@ use App\Models\PmDealCustomField;
 use App\Models\PmDealProgress;
 use App\Models\PmPipeline;
 use App\Models\PmPipelineCustomField;
+use App\Models\PmPipelineUser;
 use App\Models\PmStage;
 use App\Models\PmStageCustomField;
 use App\Models\PmType;
@@ -194,7 +195,7 @@ class ProjectManagementRepository
 
     public function indexPipeline($filters, $companyId)
     {
-        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_stages']);
+        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields.pm_custom_field', 'pm_stages', 'pm_pipeline_users.user']);
         if (in_array($filters['is_parent'], [0, 1])) {
             $pmPipeline = $pmPipeline->where('is_parent', $filters['is_parent']);
         }
@@ -621,7 +622,7 @@ class ProjectManagementRepository
         try {
             $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field',
                 'pm_deal_progress.pm_pipeline.pm_type.pm_type_custom_fields.pm_custom_field',
-                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_comments'])->find($id);
+                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_comments.created_by_user'])->find($id);
             if (!$pmDeal) return resultFunction('Err PMR-DD: deal not found');
 
             if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
@@ -674,6 +675,20 @@ class ProjectManagementRepository
                 }
             }
             $pmDeal->pm_custom_fields = $pmCustomFields;
+            if ($pmDeal->watcher) {
+                $watchers = [];
+                $pmDealWatchers = json_decode($pmDeal->watcher, true);
+                foreach ($pmDealWatchers as $item) {
+                    $watcherDb = User::find($item['user_id']);
+                    if ($watcherDb) $watchers[] = [
+                        "name" => $watcherDb->user_name,
+                        "email" => $watcherDb->user_email,
+                        "phone" => $watcherDb->user_phone,
+                        "image" => $watcherDb->user_image,
+                    ];
+                }
+                $pmDeal->watcher_users = $watchers;
+            }
 
             return resultFunction("Success to get detail deal", true, $pmDeal);
         } catch (\Exception $e) {
@@ -809,6 +824,47 @@ class ProjectManagementRepository
             return resultFunction("Create pm_deal_comments successfully", true, $pmDealComment);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-S catch: " . $e->getMessage());
+        }
+    }
+
+    public function assignUserPipeline($data)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'pm_pipeline_id' => 'required',
+                'users' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-AUP: validation err ' . $validator->errors());
+
+            $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
+            if (!$pmPipeline) return resultFunction('Err code PMR-AUP: pipeline not found');
+
+            $users = User::with([])
+                ->whereIn('id', $data['users'])
+                ->get();
+
+            if (count($users) !== count($data['users'])) return resultFunction("Err code PMR-AUP: user not match with request param");
+
+            $pmPipelineUserData = [];
+            foreach ($users as $user)  {
+                PmPipelineUser::where('pm_pipeline_id', $pmPipeline->id)->where('user_id', $user->id)->delete();
+                $pmPipelineUserData[] = [
+                    'pm_pipeline_id' => $pmPipeline->id,
+                    'user_id' => $user->id,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            PmPipelineUser::insert($pmPipelineUserData);
+
+            DB::commit();
+
+            return resultFunction("Successfully assigning user to pm_pipelines", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-AUP catch: " . $e->getMessage());
         }
     }
 }

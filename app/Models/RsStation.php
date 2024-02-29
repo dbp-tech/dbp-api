@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class RsOutlet extends Model
+class RsStation extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,10 +15,14 @@ class RsOutlet extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'rs_outlets';
+    protected $table = 'rs_stations';
     protected $guarded = [];
 
+    public function rs_menu_stations() {
+        return $this->hasMany(RsMenuStation::class, 'rs_station_id', 'id');
+    }
+
     public function rs_outlet_stations() {
-        return $this->hasMany(RsOutletStation::class, 'rs_outlet_id', 'id');
+        return $this->hasMany(RsOutletStation::class, 'rs_station_id', 'id');
     }
 }

@@ -17,4 +17,8 @@ class PmDealComment extends Model
     
     protected $table = 'pm_deal_comments';
     protected $guarded = [];
+
+    public function created_by_user() {
+        return $this->hasOne(User::class, 'id', 'created_by');
+    }
 }

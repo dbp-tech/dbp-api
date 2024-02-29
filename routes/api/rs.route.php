@@ -44,4 +44,12 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
         Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteAddonsCategory']);
         Route::get('/{id?}/detail', [RestaurantController::class, 'detailAddonsCategory']);
     });
+    Route::group(['prefix' => 'station'], function () {
+        Route::get('/', [RestaurantController::class, 'indexStation']);
+        Route::post('/', [RestaurantController::class, 'saveStation']);
+        Route::delete('/{id?}/delete', [RestaurantController::class, 'deleteStation']);
+        Route::get('/{id?}/detail', [RestaurantController::class, 'detailStation']);
+        Route::post('/assign-to-menu', [RestaurantController::class, 'assignMenuToStation']);
+        Route::post('/assign-to-outlet', [RestaurantController::class, 'assignOutletToStation']);
+    });
 });
