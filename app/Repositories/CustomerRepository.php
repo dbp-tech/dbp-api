@@ -49,6 +49,31 @@ class CustomerRepository {
         }
     }
 
+    public function store($data) {
+        try {
+            $validator = Validator::make($data, [
+                'name' => 'required',
+                'phone' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code CR-U: validation err ' . $validator->errors());
+
+            $customer = new Customer();
+
+            $customer->name = $data['name'];
+            $customer->phone = $data['phone'];
+            if (isset($data['email'])) {
+                if ($data['email']) {
+                    $customer->email = $data['email'];
+                }
+            }
+            $customer->save();
+
+            return resultFunction("Customer is updated", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code CR-U catch: " . $e->getMessage());
+        }
+    }
+
     public function assignRecipe($data) {
         try {
             $validator = Validator::make($data, [

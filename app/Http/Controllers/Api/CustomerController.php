@@ -51,6 +51,10 @@ class CustomerController extends Controller {
         return $this->customerRepo->update($request->all());
     }
 
+    public function store(Request $request) {
+        return $this->customerRepo->store($request->all());
+    }
+
     public function assignRecipe(Request $request) {
         return $this->customerRepo->assignRecipe($request->all());
     }
