@@ -68,7 +68,7 @@ class CustomerRepository {
             }
             $customer->save();
 
-            return resultFunction("Customer is updated", true);
+            return resultFunction("Customer is created", true);
         } catch (\Exception $e) {
             return resultFunction("Err code CR-U catch: " . $e->getMessage());
         }
