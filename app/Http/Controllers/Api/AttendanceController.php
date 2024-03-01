@@ -19,7 +19,6 @@ class AttendanceController extends Controller
     {
         $filters = $request->only(["user_uid", "periode"]);
         return response()->json($this->attendanceRepo->index($filters, $request->header('company_id')));
-        // return response()->json('woke');
     }
 
     public function save(Request $request)
