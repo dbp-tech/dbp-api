@@ -23,4 +23,8 @@ class MarketplaceController extends Controller
         $filters = $request->only(['store', 'invoice_number']);
         return response()->json($this->marketplaceRepo->indexOrders($filters));
     }
+
+    public function detailOrder($id) {
+        return response()->json($this->marketplaceRepo->detailOrder($id));
+    }
 }
