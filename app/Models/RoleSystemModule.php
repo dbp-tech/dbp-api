@@ -6,18 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Company extends Model
+class RoleSystemModule extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
-    const DELETED_AT = 'deletedAt';
     
-    protected $table = 'companies';
+    protected $table = 'role_system_modules';
+    protected $guarded = [];
 
-    public function organization() {
-        return $this->hasOne(Organization::class, 'id', 'organization_id');
+    public function system_module() {
+        return $this->hasOne(SystemModule::class,'id', 'system_module_id');
     }
 }

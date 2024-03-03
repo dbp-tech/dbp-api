@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Company extends Model
+class Organization extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,9 +15,10 @@ class Company extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'companies';
+    protected $table = 'organizations';
+    protected $guarded = [];
 
-    public function organization() {
-        return $this->hasOne(Organization::class, 'id', 'organization_id');
+    public function organization_subscription_log_mapping() {
+        return $this->hasOne(OrganizationSubscriptionLogMapping::class, 'organization_id', 'id');
     }
 }
