@@ -13,19 +13,30 @@ class MarketplaceRepository
     }
 
     public function indexOrders($filters) {
-        $ocOrders = OcOrder::with(['oc_store']);
-        if(!empty($filters["store"])) {
-            $ocOrders = $ocOrders->whereHas("oc_store", function($q) use($filters) {
-                return $q->where('store_name', 'LIKE', '%'.$filters["store"].'%');
+        $ocOrders = OcOrder::with('oc_store')
+            ->select('oc_orders.*')
+            ->leftJoin('oc_orders as sub', function ($join) {
+                $join->on('oc_orders.invoice_ref_num', '=', 'sub.invoice_ref_num')
+                    ->where('oc_orders.id', '<', \DB::raw('sub.id'));
+            })
+            ->whereNull('sub.id');
+
+        if (!empty($filters["store"])) {
+            $ocOrders->whereHas("oc_store", function ($q) use ($filters) {
+                $q->where('store_name', 'LIKE', '%' . $filters["store"] . '%');
             });
         }
 
-        if(!empty($filters["invoice_number"])) {
-            $ocOrders = $ocOrders->where('invoice_ref_num', 'LIKE', '%'.$filters["invoice_number"].'%');
+        if (!empty($filters["invoice_number"])) {
+            $ocOrders->where('oc_orders.invoice_ref_num', 'LIKE', '%' . $filters["invoice_number"] . '%');
+        }
+
+        if (!empty($filters["start_date"]) && !empty($filters["end_date"])) {
+            $ocOrders->whereBetween('oc_orders.createdAt', [$filters["start_date"], $filters["end_date"]]);
         }
 
         return $ocOrders
-            ->orderByDesc("id")
+            ->orderByDesc('oc_orders.id')
             ->paginate(10);
     }
 

@@ -20,7 +20,7 @@ class MarketplaceController extends Controller
     }
 
     public function indexOrders(Request $request) {
-        $filters = $request->only(['store', 'invoice_number']);
+        $filters = $request->only(['store', 'invoice_number', 'start_date', 'end_date']);
         return response()->json($this->marketplaceRepo->indexOrders($filters));
     }
 
