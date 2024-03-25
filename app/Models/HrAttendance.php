@@ -28,4 +28,8 @@ class HrAttendance extends Model
     public function hr_attendance_adjustments() {
         return $this->hasMany(HrAttendanceAdjustment::class, 'hr_attendance_id', 'id');
     }
+
+    public function hr_employee() {
+        return $this->hasOne(HrEmployee::class, 'id', 'hr_employee_id');
+    }
 }

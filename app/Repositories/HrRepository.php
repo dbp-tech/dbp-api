@@ -78,7 +78,7 @@ class HrRepository
 
     public function attendanceIndex($filters, $companyId)
     {
-        $attendance = HrAttendance::with(['user', 'hr_attendance_details', 'hr_attendance_adjustments']);
+        $attendance = HrAttendance::with(['user', 'hr_attendance_details', 'hr_attendance_adjustments', 'hr_employee']);
         if (!empty($filters['hr_employee_id'])) {
             $attendance = $attendance->where('hr_employee_id', 'LIKE', '%' . $filters['hr_employee_id'] . '%');
         }        
@@ -93,7 +93,7 @@ class HrRepository
     {
         try {
             $validator = Validator::make($data, [
-                'period_date' => 'required',
+                /*'period_date' => 'required',
                 'period_month' => 'required',
                 'period_year' => 'required',
                 'clock_in' => 'required',
@@ -105,7 +105,10 @@ class HrRepository
                 'longitude_in' => 'required',
                 'longitude_out' => 'required',
                 'late_count' => 'required',
-                'attendance_status' => 'required',
+                'attendance_status' => 'required',*/
+                'image' => 'required',
+                'latitude' => 'required',
+                'longitude' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code HR-AS: validation err ' . $validator->errors());
 
@@ -116,29 +119,47 @@ class HrRepository
 
             if (!$user->hr_employee) return resultFunction("Err code HR-AS: employee not found for user");
 
-            $attendance = HrAttendance::where('period_date', $data['period_date'])
-                ->where('period_month', $data['period_month'])
-                ->where('period_year', $data['period_year'])
+            $attendance = HrAttendance::where('period_date', date("d"))
+                ->where('period_month', date('m'))
+                ->where('period_year', date('Y'))
                 ->first();
             if (!$attendance) {
                 $attendance = new HrAttendance();
                 $attendance->company_id = $company->id;
                 $attendance->hr_employee_id = $user->hr_employee->id;
-                $attendance->period_date = $data['period_date'];
-                $attendance->period_month = $data['period_month'];
-                $attendance->period_year = $data['period_year'];
+                $attendance->period_date = date("d");
+                $attendance->period_month = date("m");
+                $attendance->period_year = date("Y");
+                $attendance->image_in = null;
+                $attendance->latitude_in = null;
+                $attendance->longitude_in = null;
+                $attendance->image_out = null;
+                $attendance->latitude_out = null;
+                $attendance->longitude_out = null;
             }
 
-            $attendance->clock_in = $data['clock_in'];
-            $attendance->clock_out = $data['clock_out'];
-            $attendance->image_in = $data['image_in'];
-            $attendance->image_out = $data['image_out'];
-            $attendance->latitude_in = $data['latitude_in'];
-            $attendance->latitude_out = $data['latitude_out'];
-            $attendance->longitude_in = $data['longitude_in'];
-            $attendance->longitude_out = $data['longitude_out'];
-            $attendance->late_count = $data['late_count'];
-            $attendance->attendance_status = $data['attendance_status'];
+            $clockType = null;
+            $timeNow = date("H:i:s");
+            if ($timeNow > '16:00:00' AND $timeNow < '20:00:00') {
+                $clockType = 'clock_out';
+            } elseif ($timeNow > '07:00:00' AND $timeNow < '11:00:00') {
+                $clockType = 'clock_in';
+            }
+
+            if (!$clockType) return resultFunction("Err code HR-AS: please clock in (7-10) and clock out (16-20)");
+
+            if ($clockType === 'clock_in') {
+                $attendance->clock_in = $timeNow;
+                $attendance->image_in = $data['image'];
+                $attendance->latitude_in = $data['latitude'];
+                $attendance->longitude_in = $data['longitude'];
+            } else {
+                $attendance->clock_out = $timeNow;
+                $attendance->image_out = $data['image'];
+                $attendance->latitude_out = $data['latitude'];
+                $attendance->longitude_out = $data['longitude'];
+            }
+            $attendance->late_count = 0;
             $attendance->save();
 
             return resultFunction("Success to save attendance", true, $attendance);
