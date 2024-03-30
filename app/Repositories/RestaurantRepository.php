@@ -659,7 +659,7 @@ class RestaurantRepository
         DB::connection('mysql')->select('SET sql_mode = "";');
 
         $validator = Validator::make($data, [
-            'report' => 'nullable|in:left_data,center_data,right_data,payment_type_data,order_type_data,total_menu_sales',
+            'report' => 'nullable|in:left_data,center_data,right_data,payment_type_data,order_type_data,total_menu_sales,total_menu_sales_all',
         ]);
 
         if ($validator->fails()) return resultFunction('Err code RR-CO: validation report type ' . $validator->errors());
@@ -777,6 +777,22 @@ class RestaurantRepository
                     GROUP BY rom.menu_title
                     ORDER BY total_buys DESC
                     LIMIT 10
+                ";
+                break;
+            case 'total_menu_sales_all':
+                $query = "
+                    SELECT
+                        rom.menu_title,
+                        SUM(rom.quantity) as total_buys,
+                        SUM(rom.menu_price) as total_price
+                    FROM rs_orders ro
+                        LEFT JOIN rs_order_menus rom ON rom.rs_order_id = ro.id
+                    WHERE
+                        rom.createdAt >= '" . $startDate . " 00:00:00' AND rom.createdAt <= '" . $endDate . " 23:59:59'
+                            AND
+                        ro.company_id = " . $companyId . "
+                    GROUP BY rom.menu_title
+                    ORDER BY total_buys DESC
                 ";
                 break;
             default:
