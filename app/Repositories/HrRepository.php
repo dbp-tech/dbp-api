@@ -458,6 +458,20 @@ class HrRepository
             ]);
             if ($validator->fails()) return resultFunction('Err code HR-SS: validation err ' . $validator->errors());
 
+            $flexibleValidate = [];
+            if ($data['pattern_type'] === 'fixed') {
+                $flexibleValidate = [
+                    'start_date' => 'required',
+                    'end_date' => 'required'
+                ];
+            } elseif (in_array($data['pattern_type'], ['daily', 'daily'])) {
+                $flexibleValidate = [
+                    'pattern_details' => 'required',
+                ];
+            }
+            $validatorFlexible = Validator::make($data, $flexibleValidate);
+            if ($validatorFlexible->fails()) return resultFunction('Err code HR-SS: validation err ' . $validatorFlexible->errors());
+
             $company = Company::find($companyId);
             if (!$company) return resultFunction('Err code HR-SS: company not found');
 
@@ -475,10 +489,13 @@ class HrRepository
             $schedule->hr_shift_id = $shift->id;
             $schedule->pattern_type = $data['pattern_type'];
             $schedule->pattern_details = '[]';
-            if ($data['pattern_type'] === 'fixed') {
-                $schedule->date = $data['date'];
-            } elseif (in_array($data['pattern_type'], ['daily', 'weekly'])) {
+            if (in_array($data['pattern_type'], ['daily', 'weekly'])) {
                 $schedule->pattern_details = json_encode($data['pattern_details']);
+            }
+
+            if ($data['pattern_type'] === 'fixed') {
+                $schedule->start_date = $data['start_date'];
+                $schedule->end_date = $data['end_date'];
             }
             $schedule->save();
 
@@ -562,7 +579,7 @@ class HrRepository
         try {
             $validator = Validator::make($data, [
                 'hr_employee_id' => 'required',
-                'type' => 'required',
+                'hr_schedule_id' => 'required',
                 'status' => 'required',
                 'effective_date' => 'required'
             ]);
@@ -574,6 +591,9 @@ class HrRepository
             $hrEmployee = HrEmployee::find($data['hr_employee_id']);
             if (!$hrEmployee) return resultFunction('Err code HR-ESS: employee not found');
 
+            $hrSchedule = HrSchedule::find($data['hr_schedule_id']);
+            if (!$hrSchedule) return resultFunction('Err code HR-ESS: schedule not found');
+
             if ($data['id']) {
                 $employeeSchedule = HrEmployeeSchedule::find($data['id']);
                 if (!$employeeSchedule) return resultFunction("Err code HR-ESS: schedule rotation not found");
@@ -583,20 +603,13 @@ class HrRepository
                 $employeeSchedule->hr_employee_id = $hrEmployee->id;
             }
 
-            if ($data['type'] === 'schedule') {
-                $hrSchedule = HrSchedule::find($data['type_id']);
-                if (!$hrSchedule) return resultFunction('Err code HR-ESS: schedule not found');
-
-                $employeeSchedule->hr_schedule_id = $data["type_id"];
-                $employeeSchedule->hr_schedule_rotation_id = null;
-            } else {
-                $hrScheduleRotation = HrScheduleRotation::find($data['type_id']);
+            if ($data['hr_schedule_rotation_id']) {
+                $hrScheduleRotation = HrScheduleRotation::find($data['hr_schedule_rotation_id']);
                 if (!$hrScheduleRotation) return resultFunction('Err code HR-ESS: schedule rotation not found');
-
-                $employeeSchedule->hr_schedule_id = null;
-                $employeeSchedule->hr_schedule_rotation_id = $data["type_id"];
+                $employeeSchedule->hr_schedule_rotation_id = $data["hr_schedule_rotation_id"];
             }
 
+            $employeeSchedule->hr_schedule_id = $data["hr_schedule_id"];
             $employeeSchedule->status = $data['status'];
             $employeeSchedule->effective_date = $data['effective_date'];
             $employeeSchedule->save();

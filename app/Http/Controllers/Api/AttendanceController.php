@@ -54,17 +54,6 @@ class AttendanceController extends Controller
         return response()->json($this->hrRepo->attendanceDetailDelete($attendanceId, $attendanceDetailId, json_decode($request->header('user'))));
     }
 
-    public function attendanceAdjustmentSave(Request $request)
-    {
-        return response()->json($this->hrRepo->attendanceAdjustmentSave($request->all(), $request->header('company_id'),
-            json_decode($request->header('user'))));
-    }
-
-    public function attendanceAdjustmentDelete($attendanceId, $attendanceAdjustmentId, Request $request)
-    {
-        return response()->json($this->hrRepo->attendanceAdjustmentDelete($attendanceId, $attendanceAdjustmentId, json_decode($request->header('user'))));
-    }
-
     public function companySettingIndex(Request $request)
     {
         $filters = $request->only([]);

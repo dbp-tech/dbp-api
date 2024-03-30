@@ -18,11 +18,6 @@ Route::group(['prefix' => 'hr', "middleware" => "checkCompayDocId"], function ()
             Route::post('/', [AttendanceController::class, 'attendanceDetailSave']);
             Route::delete('/{attendanceId}/{attendanceDetailId}/delete', [AttendanceController::class, 'attendanceDetailDelete']);
         });
-
-        Route::group(['prefix' => 'adjustment', 'middleware' => 'checkUserUid'], function () {
-            Route::post('/', [AttendanceController::class, 'attendanceAdjustmentSave']);
-            Route::delete('/{attendanceId}/{attendanceAdjustmentId}/delete', [AttendanceController::class, 'attendanceAdjustmentDelete']);
-        });
     });
 
     Route::group(['prefix' => 'company-setting'], function () {
