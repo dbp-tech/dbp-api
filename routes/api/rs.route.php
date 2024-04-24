@@ -35,6 +35,7 @@ Route::group(['prefix' => 'rs', "middleware" => "checkCompayDocId"], function ()
         Route::post('/', [RestaurantController::class, 'saveOrder']);
         Route::get('/', [RestaurantController::class, 'indexOrder']);
         Route::get('/count-order', [RestaurantController::class, 'countOrder']);
+        Route::get('/all-menu-order', [RestaurantController::class, 'allMenuOrder']);
     });
     Route::get('/last-week', [RestaurantController::class, 'lastWeekOrder']);
 

@@ -104,6 +104,13 @@ class RestaurantController extends Controller
         return response()->json($this->restaurantRepo->countOrder($request->all(), $request->header('company_id')));
     }
 
+    public function allMenuOrder(Request $request)
+    {
+        $data = $request->all();
+        $data['report'] = 'total_menu_sales_all';
+        return response()->json($this->restaurantRepo->countOrder($data, $request->header('company_id')));
+    }
+
     public function indexMenuAddons(Request $request)
     {
         $filters = $request->only(["rs_addons_category_id", "title", "status"]);
