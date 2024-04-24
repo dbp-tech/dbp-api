@@ -19,10 +19,14 @@ class PmDeal extends Model
     protected $guarded = [];
 
     public function pm_type() {
-        return $this->hasMany(PmType::class, 'id', 'pm_type_id');
+        return $this->hasOne(PmType::class, 'id', 'pm_type_id');
     }
 
     public function pm_deal_progress() {
         return $this->hasOne(PmDealProgress::class, 'pm_deal_id', 'id');
+    }
+
+    public function pm_deal_comments() {
+        return $this->hasMany(PmDealComment::class, 'pm_deal_id', 'id');
     }
 }

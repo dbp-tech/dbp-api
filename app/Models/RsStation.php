@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Customer extends Model
+class RsStation extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,14 +15,14 @@ class Customer extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'customers';
+    protected $table = 'rs_stations';
     protected $guarded = [];
 
-    public function customer_recipes() {
-        return $this->hasMany(CustomerRecipe::class, 'customer_id', 'id');
+    public function rs_menu_stations() {
+        return $this->hasMany(RsMenuStation::class, 'rs_station_id', 'id');
     }
 
-    public function company() {
-        return $this->hasOne(Company::class, 'id', 'company_id');
+    public function rs_outlet_stations() {
+        return $this->hasMany(RsOutletStation::class, 'rs_station_id', 'id');
     }
 }

@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 
-class Recipe extends Model
+class HrEmployeeSchedule extends Model
 {
     use HasFactory;
     use SoftDeletes;
@@ -15,10 +15,5 @@ class Recipe extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'recipes';
-    protected $guarded = [];
-
-    public function ri_recipe_videos() {
-        return $this->hasMany(RiRecipeVideo::class, 'recipe_id', 'id');
-    }
+    protected $table = 'hr_employee_schedules';
 }

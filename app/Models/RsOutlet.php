@@ -17,4 +17,8 @@ class RsOutlet extends Model
     
     protected $table = 'rs_outlets';
     protected $guarded = [];
+
+    public function rs_outlet_stations() {
+        return $this->hasMany(RsOutletStation::class, 'rs_outlet_id', 'id');
+    }
 }

@@ -16,4 +16,8 @@ class Company extends Model
     const DELETED_AT = 'deletedAt';
     
     protected $table = 'companies';
+
+    public function organization() {
+        return $this->hasOne(Organization::class, 'id', 'organization_id');
+    }
 }

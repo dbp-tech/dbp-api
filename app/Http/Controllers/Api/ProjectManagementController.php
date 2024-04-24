@@ -51,6 +51,11 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->savePipeline($request->all(), $request->header('company_id')));
     }
 
+    public function assignUserPipeline(Request $request)
+    {
+        return response()->json($this->pmRepo->assignUserPipeline($request->all()));
+    }
+
     public function deletePipeline(Request $request, $id = null)
     {
         return response()->json($this->pmRepo->deletePipeline($id, $request->header('company_id')));
@@ -106,6 +111,11 @@ class ProjectManagementController extends Controller
         return response()->json($this->pmRepo->changeDeal($request->all(), $request->header('company_id')));
     }
 
+    public function formSubmitDeal(Request $request)
+    {
+        return response()->json($this->pmRepo->formSubmitDeal($request->all(), $request->header('company_id')));
+    }
+
     public function indexDeal(Request $request)
     {
         $filters = $request->only(['pm_type_id']);
@@ -125,5 +135,10 @@ class ProjectManagementController extends Controller
     {
         $filters = $request->only(['pm_pipeline_id']);
         return response()->json($this->pmRepo->kanbanBoardDeal($filters, $request->header('company_id')));
+    }
+
+    public function saveComment(Request $request)
+    {
+        return response()->json($this->pmRepo->saveComment($request->all(), $request->header('company_id')));
     }
 }

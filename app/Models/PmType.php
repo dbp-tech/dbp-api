@@ -21,4 +21,16 @@ class PmType extends Model
     public function pm_type_custom_fields() {
         return $this->hasMany(PmTypeCustomField::class, 'pm_type_id', 'id');
     }
+
+    public function pm_pipeline() {
+        return $this->hasOne(PmPipeline::class, 'pm_type_id', 'id');
+    }
+
+    public function pm_stage() {
+        return $this->hasOne(PmStage::class, 'pm_type_id', 'id');
+    }
+
+    public function pm_deal() {
+        return $this->hasOne(PmDeal::class, 'pm_type_id', 'id');
+    }
 }

@@ -150,4 +150,35 @@ class RestaurantController extends Controller
     {
         return response()->json($this->restaurantRepo->deleteAddonsCategory($id, $request->header('company_id')));
     }
+
+    public function indexStation(Request $request)
+    {
+        $filters = $request->only(["title"]);
+        return response()->json($this->restaurantRepo->indexStation($filters, $request->header('company_id')));
+    }
+
+    public function saveStation(Request $request)
+    {
+        return response()->json($this->restaurantRepo->saveStation($request->all(), $request->header('company_id')));
+    }
+
+    public function deleteStation(Request $request, $id = null)
+    {
+        return response()->json($this->restaurantRepo->deleteStation($id, $request->header('company_id')));
+    }
+
+    public function detailStation(Request $request, $id = null)
+    {
+        return response()->json($this->restaurantRepo->detailStation($id, $request->header('company_id')));
+    }
+
+    public function assignMenuToStation(Request $request)
+    {
+        return response()->json($this->restaurantRepo->assignMenuToStation($request->all()));
+    }
+
+    public function assignOutletToStation(Request $request)
+    {
+        return response()->json($this->restaurantRepo->assignOutletToStation($request->all()));
+    }
 }

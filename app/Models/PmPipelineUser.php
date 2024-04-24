@@ -6,19 +6,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Recipe extends Model
+class PmPipelineUser extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
-    const DELETED_AT = 'deletedAt';
     
-    protected $table = 'recipes';
+    protected $table = 'pm_pipeline_users';
     protected $guarded = [];
 
-    public function ri_recipe_videos() {
-        return $this->hasMany(RiRecipeVideo::class, 'recipe_id', 'id');
+    public function pm_pipeline() {
+        return $this->hasOne(PmPipeline::class,  'id', 'pm_pipeline_id');
+    }
+
+    public function user() {
+        return $this->hasOne(User::class,  'id', 'user_id');
     }
 }

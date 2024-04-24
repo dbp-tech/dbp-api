@@ -25,4 +25,8 @@ class PmPipeline extends Model
     public function pm_stages() {
         return $this->hasMany(PmStage::class, 'pm_pipeline_id', 'id');
     }
+
+    public function pm_pipeline_users() {
+        return $this->hasMany(PmPipelineUser::class, 'pm_pipeline_id', 'id');
+    }
 }
