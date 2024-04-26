@@ -93,19 +93,6 @@ class HrRepository
     {
         try {
             $validator = Validator::make($data, [
-                /*'period_date' => 'required',
-                'period_month' => 'required',
-                'period_year' => 'required',
-                'clock_in' => 'required',
-                'clock_out' => 'required',
-                'image_in' => 'required',
-                'image_out' => 'required',
-                'latitude_in' => 'required',
-                'latitude_out' => 'required',
-                'longitude_in' => 'required',
-                'longitude_out' => 'required',
-                'late_count' => 'required',
-                'attendance_status' => 'required',*/
                 'image' => 'required',
                 'latitude' => 'required',
                 'longitude' => 'required',
@@ -119,9 +106,65 @@ class HrRepository
 
             if (!$user->hr_employee) return resultFunction("Err code HR-AS: employee not found for user");
 
+            $employee = $user->hr_employee;
+            $employeeSchedule = HrEmployeeSchedule::with(['hr_schedule.hr_shift'])
+                ->where('hr_employee_id', $employee->id)
+                ->first();
+            if (!$employeeSchedule) return resultFunction("Err code HR-AS: the employee don't have schedule, please contact admin");
+            if (!$employeeSchedule->hr_schedule) return resultFunction("Err code HR-AS: your schedule data not found, please contact admin");
+            if (!$employeeSchedule->hr_schedule->hr_shift) return resultFunction("Err code HR-AS: your shift data not found, please contact admin");
+
+            $schedule = $employeeSchedule->hr_schedule;
+            $shift = $schedule->hr_shift;
+
+            // Start: check your day includes at the schedule
+            $dayNow = date("l");
+            if ($schedule->pattern_type === 'fixed') {
+                if (!in_array($dayNow, ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])) return resultFunction("Err code HR-AS: your schedule is fixed, and you are absent unscheduled");
+            } else if ($schedule->pattern_type === 'weekly') {
+                $dayWeekly = $schedule->pattern_details['days'];
+                if (!in_array($dayNow, $dayWeekly)) return resultFunction("Err code HR-AS: your schedule is weekly, and you are absent unscheduled");
+            }
+            // End: check your day includes at the schedule
+
+            // Start: check your hour is clock in and clock out
+            $clockType = null;
+            $attendanceStatus = null;
+            $hourNow = date('H:i');
+            if ($shift->shift_type === 'standard') {
+                if ($hourNow > '06:00' AND $hourNow < '11:00') {
+                    $clockType = 'clock_in';
+                } elseif ($hourNow > '04:00' AND $hourNow < '20:00') {
+                    $clockType = 'clock_out';
+                }
+
+                if (!$clockType) return resultFunction("Err code HR-AS: Your working hours are outside the shift hours provisions");
+
+                if ($clockType === 'clock_in') {
+                    $attendanceStatus = $hourNow < '09:01' ? 'Present' : 'Late';
+                }
+            } elseif ($shift->shift_type === 'flexible') {
+                $detail = $shift->shift_details;
+                if ($hourNow > $detail['earliest_start_time'] AND $hourNow < $detail['latest_start_time']) {
+                    $attendanceStatus = 'Present';
+                    $clockType = 'clock_in';
+                } elseif ($hourNow > $detail['earliest_end_time'] AND $hourNow < $detail['latest_end_time']) {
+                    $clockType = 'clock_out';
+                }
+
+                if ($hourNow > $detail['latest_start_time'] AND $hourNow <= date("H:i", strtotime($detail['latest_start_time']) + 2*60*60)) {
+                    $clockType = 'clock_in';
+                    $attendanceStatus = 'Late';
+                }
+
+                if (!$clockType) return resultFunction("Err code HR-AS: Your working hours are outside the shift hours provisions");
+            }
+            // End: check your hour is clock in and clock out
+
             $attendance = HrAttendance::where('period_date', date("d"))
                 ->where('period_month', date('m'))
                 ->where('period_year', date('Y'))
+                ->where('hr_employee_id', $employee->id)
                 ->first();
             if (!$attendance) {
                 $attendance = new HrAttendance();
@@ -138,21 +181,13 @@ class HrRepository
                 $attendance->longitude_out = null;
             }
 
-            $clockType = null;
             $timeNow = date("H:i:s");
-            if ($timeNow > '16:00:00' AND $timeNow < '20:00:00') {
-                $clockType = 'clock_out';
-            } elseif ($timeNow > '07:00:00' AND $timeNow < '11:00:00') {
-                $clockType = 'clock_in';
-            }
-
-            if (!$clockType) return resultFunction("Err code HR-AS: please clock in (7-10) and clock out (16-20)");
-
             if ($clockType === 'clock_in') {
                 $attendance->clock_in = $timeNow;
                 $attendance->image_in = $data['image'];
                 $attendance->latitude_in = $data['latitude'];
                 $attendance->longitude_in = $data['longitude'];
+                $attendance->attendance_status = $attendanceStatus;
             } else {
                 $attendance->clock_out = $timeNow;
                 $attendance->image_out = $data['image'];

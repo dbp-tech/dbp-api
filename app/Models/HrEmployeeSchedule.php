@@ -16,4 +16,8 @@ class HrEmployeeSchedule extends Model
     const DELETED_AT = 'deletedAt';
     
     protected $table = 'hr_employee_schedules';
+
+    public function hr_schedule() {
+        return $this->hasOne(HrSchedule::class, 'id', 'hr_schedule_id');
+    }
 }
