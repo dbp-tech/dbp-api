@@ -47,4 +47,10 @@ Route::group(['prefix' => 'hr', "middleware" => "checkCompayDocId"], function ()
     Route::group(['prefix' => 'employee-schedule'], function () {
         Route::post('/', [AttendanceController::class, 'employeeScheduleSave']);
     });
+
+    Route::group(['prefix' => 'schedule-exception'], function () {
+        Route::get('/', [AttendanceController::class, 'scheduleExceptionIndex']);
+        Route::post('/', [AttendanceController::class, 'scheduleExceptionSave']);
+        Route::post('/{id}/approval', [AttendanceController::class, 'scheduleExceptionSaveApproval']);
+    });
 });

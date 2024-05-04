@@ -122,4 +122,20 @@ class AttendanceController extends Controller
     {
         return response()->json($this->hrRepo->employeeScheduleSave($request->all(), $request->header('company_id')));
     }
+
+    public function scheduleExceptionSave(Request $request)
+    {
+        return response()->json($this->hrRepo->scheduleExceptionSave($request->all(), $request->header('company_id')));
+    }
+
+    public function scheduleExceptionIndex(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->hrRepo->scheduleExceptionIndex($filters, $request->header('company_id')));
+    }
+
+    public function scheduleExceptionSaveApproval(Request $request)
+    {
+        return response()->json($this->hrRepo->scheduleExceptionSaveApproval($request->all(), $request->header('company_id')));
+    }
 }

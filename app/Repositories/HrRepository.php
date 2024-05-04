@@ -15,6 +15,7 @@ use App\Models\HrLeaveCategory;
 use App\Models\HrLeaveRequest;
 use App\Models\HrLeaveRequestApproval;
 use App\Models\HrSchedule;
+use App\Models\HrScheduleException;
 use App\Models\HrScheduleRotation;
 use App\Models\HrShift;
 use App\Models\User;
@@ -653,6 +654,57 @@ class HrRepository
         } catch (\Exception $e) {
             return resultFunction("Err code HR-ESS catch: " . $e->getMessage());
         }
+    }
+
+    public function scheduleExceptionSave($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'exception_type' => 'required',
+                'exception_detail' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code HR-SES: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code HR-SES: company not found');
+
+            if ($data['id']) {
+                $scheduleException = HrScheduleException::find($data['id']);
+                if (!$scheduleException) return resultFunction("Err code HR-SES: schedule exception not found");
+            } else {
+                $scheduleException = new HrScheduleException();
+                $scheduleException->company_id = $company->id;
+            }
+
+            if ($data['exception_type'] === 'Leave') {
+                $scheduleException->start_date = $data['exception_detail']['startDate'];
+                $scheduleException->end_date = $data['exception_detail']['endDate'];
+            } elseif (in_array($data['exception_type'], ['Absence', 'Overtime', 'Correction'])) {
+                $scheduleException->start_date = $data['exception_detail']['date'];
+                $scheduleException->end_date = $data['exception_detail']['date'];
+                if ($data['exception_type'] === 'Overtime') {
+                    $scheduleException->hours = $data['exception_detail']['hours'];
+                }
+            }
+
+            $scheduleException->notes = $data['exception_detail']['reason'];
+            $scheduleException->exception_type = $data['exception_type'];
+            $scheduleException->exception_details = json_encode($data['exception_detail']);
+            $scheduleException->save();
+
+            return resultFunction("Success to save schedule exception", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code HR-SES catch: " . $e->getMessage());
+        }
+    }
+
+    public function scheduleExceptionIndex($filters, $companyId)
+    {
+        $scheduleExceptions = HrScheduleException::with([]);
+        $scheduleExceptions = $scheduleExceptions->where('company_id', $companyId);
+        $scheduleExceptions = $scheduleExceptions->orderBy('id', 'desc')->paginate(25);
+
+        return $scheduleExceptions;
     }
 }
 
