@@ -79,7 +79,7 @@ class HrRepository
 
     public function attendanceIndex($filters, $companyId)
     {
-        $attendance = HrAttendance::with(['user', 'hr_attendance_details', 'hr_attendance_adjustments', 'hr_employee']);
+        $attendance = HrAttendance::with(['user', 'hr_attendance_details', 'hr_attendance_adjustments', 'hr_employee.user']);
         if (!empty($filters['hr_employee_id'])) {
             $attendance = $attendance->where('hr_employee_id', 'LIKE', '%' . $filters['hr_employee_id'] . '%');
         }        
@@ -207,7 +207,7 @@ class HrRepository
     public function attendanceDetail($id, $companyId)
     {
         try {
-            $attendance = HrAttendance::with(['hr_attendance_details', 'hr_attendance_adjustments'])->find($id);
+            $attendance = HrAttendance::with(['hr_attendance_details', 'hr_attendance_adjustments', 'hr_employee.user'])->find($id);
             if (!$attendance) return resultFunction("Err code HR-AD: attendance not found");
 
             if ($attendance->company_id != $companyId) return resultFunction("Err code HR-AD: the attendance is not belongs to you");
