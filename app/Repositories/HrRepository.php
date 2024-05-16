@@ -429,7 +429,8 @@ class HrRepository
             $validator = Validator::make($data, [
                 'shift_name' => 'required',
                 'shift_description' => 'required',
-                'shift_type' => 'required'
+                'shift_type' => 'required',
+                'shift_details' => 'required'
             ]);
             if ($validator->fails()) return resultFunction('Err code HR-SS: validation err ' . $validator->errors());
 
@@ -447,10 +448,7 @@ class HrRepository
             $shift->shift_name = $data['shift_name'];
             $shift->shift_description = $data['shift_description'];
             $shift->shift_type = $data['shift_type'];
-            $shift->shift_details = '[]';
-            if (in_array($data['shift_type'], ['split', 'flexible'])) {
-                $shift->shift_details = json_encode($data['shift_details']);
-            }
+            $shift->shift_details = json_encode($data['shift_details']);
             $shift->save();
 
             return resultFunction("Success to save shift", true);
