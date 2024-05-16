@@ -474,6 +474,20 @@ class HrRepository
         }
     }
 
+    public function shiftPerUser($user) {
+        try {
+            $employeeSchedule = HrEmployeeSchedule::with(['hr_schedule.hr_shift'])
+                ->where('hr_employee_id', $user->hr_employee->id)
+                ->first();
+
+            if (!$employeeSchedule) return resultFunction("Err code HR-SPU: employee doesn't have a schedule");
+
+            return resultFunction("", true, $employeeSchedule);
+        } catch (\Exception $e) {
+            return resultFunction("Err code HR-SPU catch: " . $e->getMessage());
+        }
+    }
+
     public function scheduleIndex($filters, $companyId)
     {
         $schedules = HrSchedule::with(['hr_shift']);

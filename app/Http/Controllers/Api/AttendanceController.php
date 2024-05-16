@@ -86,6 +86,11 @@ class AttendanceController extends Controller
         return response()->json($this->hrRepo->shiftDelete($id, $request->header('company_id')));
     }
 
+    public function shiftPerUser(Request $request)
+    {
+        return response()->json($this->hrRepo->shiftPerUser(json_decode($request->header('user'))));
+    }
+
     public function scheduleIndex(Request $request)
     {
         $filters = $request->only([]);

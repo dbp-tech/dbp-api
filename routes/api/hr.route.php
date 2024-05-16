@@ -30,6 +30,7 @@ Route::group(['prefix' => 'hr', "middleware" => "checkCompayDocId"], function ()
         Route::get('/', [AttendanceController::class, 'shiftIndex']);
         Route::post('/', [AttendanceController::class, 'shiftSave']);
         Route::delete('/{id?}/delete', [AttendanceController::class, 'shiftDelete']);
+        Route::get('/per-user', [AttendanceController::class, 'shiftPerUser'])->middleware('checkUserUid');
     });
 
     Route::group(['prefix' => 'schedule'], function () {
