@@ -12,6 +12,7 @@ use App\Models\RsMenu;
 use App\Models\RsMenuAddon;
 use App\Models\RsMenuAddonPrice;
 use App\Models\RsMenuAddonRecipe;
+use App\Models\RsMenuOutlet;
 use App\Models\RsMenuPrice;
 use App\Models\RsMenuRecipe;
 use App\Models\RsMenuStation;
@@ -936,6 +937,101 @@ class RestaurantRepository
             return resultFunction("Successfully assigning station to outlet ", true);
         } catch (\Exception $e) {
             return resultFunction("Err code RR-AOS catch: " . $e->getMessage());
+        }
+    }
+
+    public function saveMenuOutlet($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'rs_menu_id' => 'required',
+                'rs_outlet_id' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SMO: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SMO: company not found');
+
+            $rsMenu = RsMenu::find($data['rs_menu_id']);
+            if (!$rsMenu) return resultFunction('Err code RR-SMO: menu not found');
+
+            $rsOutlet = RsOutlet::find($data['rs_outlet_id']);
+            if (!$rsOutlet) return resultFunction('Err code RR-SMO: outlet not found');
+
+            RsMenuOutlet::where('rs_menu_id', $data['rs_menu_id'])->where('rs_outlet_id', $data['rs_outlet_id'])->delete();
+
+            RsMenuOutlet::create([
+                'rs_menu_id' => $data['rs_menu_id'],
+                'rs_outlet_id' => $data['rs_outlet_id']
+            ]);
+
+            DB::commit();
+            return resultFunction("Success to create menu outlet", true, '');
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SMO catch: " . $e->getMessage());
+        }
+    }
+
+    public function saveMenuOutletPerOutlet($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validator = Validator::make($data, [
+                'rs_menu_ids' => 'required',
+                'rs_outlet_id' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code RR-SMO: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-SMO: company not found');
+
+            $rsMenus = RsMenu::with([])->whereIn('id', $data['rs_menu_ids'])->get();
+            if (count($rsMenus) == 0) return resultFunction('Err code RR-SMO: menu not found');
+
+            if (count($rsMenus) !== count($data['rs_menu_ids'])) return resultFunction('Err code RR-SMO: menu is not match with database');
+
+            $rsOutlet = RsOutlet::find($data['rs_outlet_id']);
+            if (!$rsOutlet) return resultFunction('Err code RR-SMO: outlet not found');
+
+            $paramSave = [];
+            foreach ($rsMenus as $menu) {
+                $paramSave[] = [
+                    'rs_menu_id' => $menu->id,
+                    'rs_outlet_id' => $rsOutlet->id,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            RsMenuOutlet::where('rs_outlet_id', $data['rs_outlet_id'])->delete();
+
+            RsMenuOutlet::insert($paramSave);
+
+            DB::commit();
+            return resultFunction("Success to create menu outlet", true, '');
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-SMO catch: " . $e->getMessage());
+        }
+    }
+
+    public function detailMenuOutlet($id, $companyId) {
+        try {
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code RR-DMO: company not found');
+
+            $rsOutlet =  RsOutlet::find($id);
+            if (!$rsOutlet) return resultFunction('Err RR-DMO: outlet not found');
+
+            $rsMenuOutlets = RsMenuOutlet::with(['rs_menu', 'rs_outlet'])
+                ->where('rs_outlet_id', $rsOutlet->id)
+                ->get();
+
+            return resultFunction("", true, $rsMenuOutlets);
+        } catch (\Exception $e) {
+            return resultFunction("Err code RR-DMO catch: " . $e->getMessage());
         }
     }
 }

@@ -181,4 +181,19 @@ class RestaurantController extends Controller
     {
         return response()->json($this->restaurantRepo->assignOutletToStation($request->all()));
     }
+
+    public function saveMenuOutlet(Request $request)
+    {
+        return response()->json($this->restaurantRepo->saveMenuOutlet($request->all(), $request->header('company_id')));
+    }
+
+    public function saveMenuOutletPerOutlet(Request $request)
+    {
+        return response()->json($this->restaurantRepo->saveMenuOutletPerOutlet($request->all(), $request->header('company_id')));
+    }
+
+    public function detailMenuOutlet(Request $request, $id = null)
+    {
+        return response()->json($this->restaurantRepo->detailMenuOutlet($id, $request->header('company_id')));
+    }
 }
