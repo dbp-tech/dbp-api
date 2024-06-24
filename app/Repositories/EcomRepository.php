@@ -6,7 +6,9 @@ use App\Models\Company;
 use App\Models\EcomProduct;
 use App\Models\EcomProductCategory;
 use App\Models\EcomProductCategoryMapping;
+use App\Models\EcomProductMarketplaceMapping;
 use App\Models\EcomProductVariant;
+use App\Models\OcStore;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,8 +18,48 @@ class EcomRepository
     {
         $ecomProductCategory = EcomProductCategory::with([]);
         $ecomProductCategory = $ecomProductCategory->where('company_id', $companyId);
-        $ecomProductCategory = $ecomProductCategory->orderBy('id', 'desc')->paginate(25);
-        return $ecomProductCategory;
+        $ecomProductCategory = $ecomProductCategory->orderBy('id', 'desc')->get();
+        return $this->sortByParent(($ecomProductCategory));
+    }
+
+    public function sortByParent($ecomProductCategory) {
+        $categoryResult = [];
+        $mainCategories = $ecomProductCategory->whereNull('parent_id');
+        foreach ($mainCategories as $mC) {
+            $subCategories = $ecomProductCategory->where('parent_id', $mC->id);
+            $subCategoryResult = [];
+            if (count($subCategories) > 0) {
+                $subSubCategoryResult = [];
+                foreach ($subCategories as $sC) {
+                    $subSubCategories = $ecomProductCategory->where('parent_id', $sC->id);
+                    if (count($subSubCategories) > 0) {
+                        foreach ($subSubCategories as $ssC) {
+                            $subSubCategoryResult[] = [
+                                'id' => $ssC->id,
+                                'name' => $ssC->name,
+                                'description' => $ssC->description,
+                                'parent_id' => $ssC->parent_id,
+                            ];
+                        }
+                    }
+                    $subCategoryResult[] = [
+                        'id' => $sC->id,
+                        'name' => $sC->name,
+                        'description' => $sC->description,
+                        'parent_id' => $sC->parent_id,
+                        'items' => $subSubCategoryResult
+                    ];
+                }
+            }
+            $categoryResult[] = [
+                'id' => $mC->id,
+                'name' => $mC->name,
+                'description' => $mC->description,
+                'parent_id' => $mC->parent_id,
+                'items' => $subCategoryResult
+            ];
+        }
+        return $categoryResult;
     }
 
     public function categorySave($data, $companyId)
@@ -25,9 +67,7 @@ class EcomRepository
         try {
             $validator = Validator::make($data, [
                 'name' => 'required',
-                'description' => 'required',
-//                'category_type' => 'required',
-//                'attributes' => 'required',
+                'description' => 'required'
             ]);
             if ($validator->fails()) return resultFunction('Err code ER-S: validation err ' . $validator->errors());
 
@@ -75,7 +115,7 @@ class EcomRepository
     public function categoryDelete($id, $companyId) {
         try {
             $ecomProductCategory =  EcomProductCategory::find($id);
-            if (!$ecomProductCategory) return resultFunction('Err ER-D: product category not found');
+            if (!$ecomProductCategory) return resultFunction('Err ER-D: Sproduct category not found');
 
             if ($ecomProductCategory->company_id != $companyId) return resultFunction('Err code ER-CD: product category is not belongs you');
 
@@ -119,7 +159,7 @@ class EcomRepository
     {
         $ecomProduct = EcomProduct::with(['product_variants', 'product_category.ecom_product_category']);
         $ecomProduct = $ecomProduct->where('company_id', $companyId);
-        $ecomProduct = $ecomProduct->orderBy('id', 'desc')->paginate(25);
+        $ecomProduct = $ecomProduct->orderBy('id', 'desc')->get();
         return $ecomProduct;
     }
 
@@ -210,6 +250,136 @@ class EcomRepository
             return resultFunction("Success to delete product", true);
         } catch (\Exception $e) {
             return resultFunction("Err code ER-PD catch: " . $e->getMessage());
+        }
+    }
+
+    public function storeIndex($filters, $companyId)
+    {
+        $ocStores = OcStore::with(['ecom_products_mapping.product']);
+        $ocStores = $ocStores->where('company_id', $companyId);
+        $ocStores = $ocStores->orderBy('id', 'desc')->get();
+        return $ocStores;
+    }
+
+    public function storeSave($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'store_type' => 'required',
+                'is_active' => 'required',
+                'type_logo' => 'required',
+                'store_name' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code ER-SS: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-SS: company not found');
+
+            if ($data['id']) {
+                $ocStore = OcStore::find($data['id']);
+                if (!$ocStore) return resultFunction("Err code ER-SS: product category not found");
+            } else {
+                $ocStore = new OcStore();
+            }
+            $ocStore->company_id = $company->id;
+            $ocStore->store_name = $data['store_name'];
+            $ocStore->is_active = $data['is_active'];
+            $ocStore->type_logo = $data['type_logo'];
+            $ocStore->store_type = $data['store_type'];
+            if (isset($data['attribute_details'])) {
+                $ocStore->attribute_details = json_encode($data['attribute_details']);
+            }
+            $ocStore->save();
+
+            return resultFunction("Success to create store", true, $ocStore);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-SS catch: " . $e->getMessage());
+        }
+    }
+
+    public function storeDelete($id, $companyId) {
+        try {
+            $ocStore =  OcStore::find($id);
+            if (!$ocStore) return resultFunction('Err ER-SD: store not found');
+
+            if ($ocStore->company_id != $companyId) return resultFunction('Err code ER-sD: store is not belongs you');
+
+            $ocStore->delete();
+
+            return resultFunction("Success to delete store", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-SD catch: " . $e->getMessage());
+        }
+    }
+
+    public function getProductOnly($storeId, $companyId) {
+        $products = EcomProduct::with(['ecom_product_marketplace_mapping'])
+            ->whereDoesntHave('ecom_product_marketplace_mapping', function ($q) use ($storeId) {
+                $q->where('store_id', $storeId);
+            })
+            ->where('company_id', $companyId)
+            ->get();
+        return $products;
+    }
+
+    public function deleteProductOnly($id) {
+        try {
+            $ecomProductMapping = EcomProductMarketplaceMapping::find($id);
+            if (!$ecomProductMapping) return resultFunction("Err code ER-SPO: mapping not found");
+
+            $ecomProductMapping->delete();
+
+            return resultFunction("Success delete", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-SPO: catch " . $e->getMessage());
+        }
+    }
+
+    public function setProductOnly($data, $companyId) {
+        try {
+            $validator = Validator::make($data, [
+                'id' => 'required',
+                'data' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code ER-SPO: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-SPO: company not found');
+
+            $store = OcStore::find($data['id']);
+            if (!$store) return resultFunction('Err code ER-SPO: store not found');
+
+            $ids = [];
+            foreach ($data['data'] as $item) {
+                if (isset($item['is_selected'])) {
+                    if ($item['is_selected']) {
+                        $ids[] = $item['id'];
+                    }
+                }
+            }
+
+            if (count($ids) === 0)  return resultFunction('Err code ER-SPO: please select product');
+
+            $products = EcomProduct::with([])
+                ->whereIn('id', $ids)
+                ->get();
+
+            if (count($ids) !== count($products)) return resultFunction("Err code ER-SPO: the product is not match");
+            $paramSave = [];
+            foreach ($ids as $id) {
+                $paramSave[] = [
+                    'product_id' => $id,
+                    'store_id' => $store->id,
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            EcomProductMarketplaceMapping::insert($paramSave);
+
+            return resultFunction("Success to save it", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-SPO: catch " . $e->getMessage());
         }
     }
 }

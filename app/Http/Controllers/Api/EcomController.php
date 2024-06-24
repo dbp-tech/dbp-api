@@ -46,4 +46,35 @@ class EcomController extends Controller
     {
         return response()->json($this->ecomRepo->productDelete($id, $request->header('company_id')));
     }
+
+    public function getProductOnly($id, Request $request)
+    {
+        return response()->json($this->ecomRepo->getProductOnly($id, $request->header('company_id')));
+    }
+
+    public function deleteProductOnly($id)
+    {
+        return response()->json($this->ecomRepo->deleteProductOnly($id));
+    }
+
+    public function setProductOnly(Request $request)
+    {
+        return response()->json($this->ecomRepo->setProductOnly($request->all(), $request->header('company_id')));
+    }
+
+    public function storeIndex(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->ecomRepo->storeIndex($filters, $request->header('company_id')));
+    }
+
+    public function storeSave(Request $request)
+    {
+        return response()->json($this->ecomRepo->storeSave($request->all(), $request->header('company_id')));
+    }
+
+    public function storeDelete(Request $request, $id = null)
+    {
+        return response()->json($this->ecomRepo->storeDelete($id, $request->header('company_id')));
+    }
 }

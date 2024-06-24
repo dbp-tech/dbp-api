@@ -5,17 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OcStore extends Model
+class EcomProductMarketplaceMapping extends Model
 {
     use HasFactory;
 
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
     
-    protected $table = 'oc_stores';
-    protected $guarded = [];
+    protected $table = 'ecom_product_marketplace_mapping';
 
-    public function ecom_products_mapping() {
-        return $this->hasMany(EcomProductMarketplaceMapping::class, 'store_id', 'id');
+    public function product() {
+        return $this->hasOne(EcomProduct::class, 'id', 'product_id');
     }
 }

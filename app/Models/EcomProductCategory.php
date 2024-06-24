@@ -14,4 +14,8 @@ class EcomProductCategory extends Model
     const UPDATED_AT = 'updatedAt';
     
     protected $table = 'ecom_product_categories';
+
+    public function parentCategory() {
+        return $this->hasOne(EcomProductCategory::class, 'id', 'parent_id');
+    }
 }

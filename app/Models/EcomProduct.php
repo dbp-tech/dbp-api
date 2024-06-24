@@ -29,4 +29,8 @@ class EcomProduct extends Model
     public function product_category() {
         return $this->hasOne(EcomProductCategoryMapping::class, 'product_id', 'id');
     }
+
+    public function ecom_product_marketplace_mapping() {
+        return $this->hasOne(EcomProductMarketplaceMapping::class, 'product_id', 'id');
+    }
 }
