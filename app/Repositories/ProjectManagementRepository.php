@@ -7,6 +7,7 @@ use App\Models\PmCustomField;
 use App\Models\PmDeal;
 use App\Models\PmDealComment;
 use App\Models\PmDealCustomField;
+use App\Models\PmDealPipelineUser;
 use App\Models\PmDealProgress;
 use App\Models\PmPipeline;
 use App\Models\PmPipelineUser;
@@ -620,7 +621,8 @@ class ProjectManagementRepository
         try {
             $pmDeal = PmDeal::with(['pm_type.pm_type_custom_fields.pm_custom_field',
                 'pm_deal_progress.pm_pipeline.pm_type.pm_type_custom_fields.pm_custom_field',
-                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_comments.created_by_user'])->find($id);
+                'pm_deal_progress.pm_stage.pm_type.pm_type_custom_fields.pm_custom_field', 'pm_deal_comments.created_by_user',
+                'pm_deal_pipeline_users.user'])->find($id);
             if (!$pmDeal) return resultFunction('Err PMR-DD: deal not found');
 
             if ($pmDeal->company_id != $companyId) return resultFunction('Err PMR-DS: deal not found');
@@ -730,9 +732,9 @@ class ProjectManagementRepository
 
     public function kanbanBoardDeal($filters, $companyId)
     {
-        $pmPipeline = PmPipeline::find($filters['pm_pipeline_id']);
+        $pmPipeline = PmPipeline::with(['pm_type.pm_type_custom_fields'])->find($filters['pm_pipeline_id']);
 
-        $pmDealProgress = PmDealProgress::with(['pm_stage', 'pm_deal']);
+        $pmDealProgress = PmDealProgress::with(['pm_stage', 'pm_deal.pm_deal_pipeline_users.user']);
         $pmDealProgress = $pmDealProgress->where('company_id', $companyId);
         $pmDealProgress = $pmDealProgress->where('pm_pipeline_id', $filters['pm_pipeline_id']);
         $pmDealProgress = $pmDealProgress->get();
@@ -767,6 +769,16 @@ class ProjectManagementRepository
                     }
                 }
             }
+
+            $pmDealPipelineUsers = [];
+            if ($dealProgress->pm_deal) {
+                foreach ($dealProgress->pm_deal->pm_deal_pipeline_users as $user) {
+                    if ($user->user) {
+                        $pmDealPipelineUsers[] = $user->user;
+                    }
+                }
+            }
+
             $pipelineData[] = [
                 'Id' => $dealProgress->pm_deal_id,
                 'Status' => $dealProgress->pm_stage_id,
@@ -780,6 +792,7 @@ class ProjectManagementRepository
                 'PmPipelineId' => $dealProgress->pm_pipeline_id,
                 'PmStageId' => $dealProgress->pm_stage_id,
                 'PmTypeId' => $dealProgress->pm_deal->pm_type_id,
+                'PmDealPipelineUsers' => $pmDealPipelineUsers,
                 'createdAt' => $dealProgress->createdAt,
                 'updatedAt' => $dealProgress->updatedAt
             ];
@@ -863,6 +876,71 @@ class ProjectManagementRepository
             return resultFunction("Successfully assigning user to pm_pipelines", true);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-AUP catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexDpu($filters, $companyId)
+    {
+        $pmDpu = PmDealPipelineUser::with([]);
+        $pmDpu = $pmDpu->where('company_id', $companyId);
+        $pmDpu = $pmDpu->orderBy('id', 'desc')->paginate(25);
+        return $pmDpu;
+    }
+
+    public function saveDpu($data, $companyId)
+    {
+        try {
+            $validator = Validator::make($data, [
+                'pm_deal_id' => 'required',
+                'pm_pipeline_id' => 'required',
+                'user_id' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-SDPU: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-SDPU: company not found');
+
+            $pmDeal = PmDeal::find($data['pm_deal_id']);
+            if (!$pmDeal) return resultFunction('Err code PMR-SDPU: deal not found');
+
+            $pmPipeline = PmPipeline::find($data['pm_pipeline_id']);
+            if (!$pmPipeline) return resultFunction('Err code PMR-SDPU: pipeline not found');
+
+            $user = User::find($data['user_id']);
+            if (!$user) return resultFunction('Err code PMR-SDPU: user not found');
+            
+            $pmDpu = PmDealPipelineUser::with([])
+                ->where('company_id', $companyId)
+                ->where('pm_deal_id', $data['pm_deal_id'])
+                ->where('pm_pipeline_id', $data['pm_pipeline_id'])
+                ->where('user_id', $data['user_id'])
+                ->first();
+
+            if (!$pmDpu) $pmDpu = new PmDealPipelineUser();
+            $pmDpu->company_id = $company->id;
+            $pmDpu->pm_deal_id = $data['pm_deal_id'];
+            $pmDpu->pm_pipeline_id = $data['pm_pipeline_id'];
+            $pmDpu->user_id = $data['user_id'];
+            $pmDpu->save();
+
+            return resultFunction("Success to assign", true, $pmDpu);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-SDPU catch: " . $e->getMessage());
+        }
+    }
+
+    public function deleteDpu($id, $companyId) {
+        try {
+            $pmCF =  PmDealPipelineUser::find($id);
+            if (!$pmCF) return resultFunction('Err PMR-Dpu: custom field not found');
+
+            if ($pmCF->company_id != $companyId) return resultFunction('Err PMR-Dpu: custom field not found');
+
+            $pmCF->delete();
+
+            return resultFunction("Success to delete assign", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-Dpu catch: " . $e->getMessage());
         }
     }
 }

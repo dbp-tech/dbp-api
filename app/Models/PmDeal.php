@@ -29,4 +29,8 @@ class PmDeal extends Model
     public function pm_deal_comments() {
         return $this->hasMany(PmDealComment::class, 'pm_deal_id', 'id');
     }
+
+    public function pm_deal_pipeline_users() {
+        return $this->hasMany(PmDealPipelineUser::class, 'pm_deal_id', 'id');
+    }
 }

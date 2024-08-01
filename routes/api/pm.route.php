@@ -42,4 +42,9 @@ Route::group(['prefix' => 'pm', "middleware" => "checkCompayDocId"], function ()
             Route::post('/', [ProjectManagementController::class, 'saveComment']);
         });
     });
+    Route::group(['prefix' => 'deal-pipeline-user'], function () {
+        Route::get('/', [ProjectManagementController::class, 'indexDpu']);
+        Route::post('/', [ProjectManagementController::class, 'saveDpu']);
+        Route::delete('/{id?}/delete', [ProjectManagementController::class, 'deleteDpu']);
+    });
 });

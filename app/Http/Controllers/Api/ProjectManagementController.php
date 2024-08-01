@@ -141,4 +141,20 @@ class ProjectManagementController extends Controller
     {
         return response()->json($this->pmRepo->saveComment($request->all(), $request->header('company_id')));
     }
+
+    public function indexDpu(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->pmRepo->indexDpu($filters, $request->header('company_id')));
+    }
+
+    public function saveDpu(Request $request)
+    {
+        return response()->json($this->pmRepo->saveDpu($request->all(), $request->header('company_id')));
+    }
+
+    public function deleteDpu(Request $request, $id = null)
+    {
+        return response()->json($this->pmRepo->deleteDpu($id, $request->header('company_id')));
+    }
 }
