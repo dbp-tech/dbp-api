@@ -77,4 +77,29 @@ class EcomController extends Controller
     {
         return response()->json($this->ecomRepo->storeDelete($id, $request->header('company_id')));
     }
+
+    public function marketplaceDetail(Request $request, $id = null)
+    {
+        return response()->json($this->ecomRepo->marketplaceDetail($id, $request->header('company_id')));
+    }
+
+    public function marketplaceProduct(Request $request, $id = null)
+    {
+        return response()->json($this->ecomRepo->marketplaceProduct($id, $request->all(), $request->header('company_id')));
+    }
+
+    public function storeMarketplaceProduct(Request $request)
+    {
+        return response()->json($this->ecomRepo->storeMarketplaceProduct($request->all(), $request->header('company_id')));
+    }
+
+    public function marketplaceOrder(Request $request, $id = null)
+    {
+        return response()->json($this->ecomRepo->marketplaceOrder($id, $request->all(), $request->header('company_id')));
+    }
+
+    public function marketplaceOrderDetail(Request $request, $orderId = null)
+    {
+        return response()->json($this->ecomRepo->marketplaceOrderDetail($orderId, $request->header('company_id')));
+    }
 }

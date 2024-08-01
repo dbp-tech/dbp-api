@@ -30,7 +30,11 @@ class EcomProduct extends Model
         return $this->hasOne(EcomProductCategoryMapping::class, 'product_id', 'id');
     }
 
-    public function ecom_product_marketplace_mapping() {
-        return $this->hasOne(EcomProductMarketplaceMapping::class, 'product_id', 'id');
+    public function ecom_product_stores() {
+        return $this->hasOne(EcomProductStore::class, 'product_id', 'id');
+    }
+
+    public function ecom_product_store_many() {
+        return $this->hasMany(EcomProductStore::class, 'product_id', 'id');
     }
 }

@@ -14,7 +14,7 @@ class EcomProductMarketplaceMapping extends Model
     
     protected $table = 'ecom_product_marketplace_mapping';
 
-    public function product() {
-        return $this->hasOne(EcomProduct::class, 'id', 'product_id');
+    public function ecom_product_store() {
+        return $this->hasOne(EcomProductStore::class, 'id', 'ecom_product_store_id');
     }
 }

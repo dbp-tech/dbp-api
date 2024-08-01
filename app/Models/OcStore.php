@@ -15,7 +15,11 @@ class OcStore extends Model
     protected $table = 'oc_stores';
     protected $guarded = [];
 
-    public function ecom_products_mapping() {
-        return $this->hasMany(EcomProductMarketplaceMapping::class, 'store_id', 'id');
+    public function ecom_product_stores() {
+        return $this->hasMany(EcomProductStore::class, 'store_id', 'id');
+    }
+
+    public function oc_orders() {
+        return $this->hasMany(OcOrder::class, 'store_id', 'store_id')->orderBy('createdAt', 'desc');
     }
 }

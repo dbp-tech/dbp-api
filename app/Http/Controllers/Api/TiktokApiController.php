@@ -24,10 +24,4 @@ class TiktokApiController extends Controller
     {
         return response()->json($this->tiktokApiRepo->webhookOrderStatus($request->all()));
     }
-
-    public function orderIndex(Request $request)
-    {
-        $filters = $request->only(['start_date', 'end_date']);
-        return response()->json($this->tiktokApiRepo->orderIndex($filters));
-    }
 }

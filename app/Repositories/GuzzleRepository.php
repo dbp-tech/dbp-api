@@ -9,7 +9,8 @@ class GuzzleRepository {
     public function getTiktokToken($tokenOnly = false) {
         $tiktokCache = Cache::get('tiktok_token');
         if (!$tiktokCache AND !$tokenOnly) {
-            $refreshUrl = 'https://auth.tiktok-shops.com/api/v2/token/refresh?app_key=' . env('TIKTOK_APP_KEY') . '&app_secret=' . env('TIKTOK_APP_SECRET') . '&refresh_token=ROW_m7lTOAAAAACnoSiSa0danC3PmWPmiXT6WxtXaKcc-rGZyVEFhK3TMF723JDXrd8K0SGLBV3OSh8&grant_type=refresh_token';
+            $refreshToken = "ROW_cXceSQAAAACnoSiSa0danC3PmWPmiXT6SHGEHJ8p6nxwo_UANhQ486FE4QroYWRys_DNWMYql2U";
+            $refreshUrl = 'https://auth.tiktok-shops.com/api/v2/token/refresh?app_key=' . env('TIKTOK_APP_KEY') . '&app_secret=' . env('TIKTOK_APP_SECRET') . '&refresh_token=' . $refreshToken . '&grant_type=refresh_token';
             $client = new \GuzzleHttp\Client();
             $response = $client->request('GET', $refreshUrl);
             $content = json_decode($response->getBody()->getContents(), true);
@@ -27,16 +28,18 @@ class GuzzleRepository {
         return $tiktokToken;
     }
 
-    public function signatureAlgorithm($timestamp, $requestPath) {
+    public function signatureAlgorithm($timestamp, $requestPath, $data = []) {
         $appSecret = env('TIKTOK_APP_SECRET');
         $params = [
-            "app_key" => env('TIKTOK_APP_KEY'),
-            "shop_id" => env('TIKTOK_SHOP_ID'),
-            "timestamp" => $timestamp
+            "app_key" => env('TIKTOK_APP_KEY')
         ];
+        foreach ($data as $key => $item) {
+            $params[$key] = $item;
+        }
+        $params["timestamp"] = $timestamp;
         $buildQuery = '';
         foreach ($params as $key => $item) {
-            $buildQuery = $buildQuery . $key . $item;
+            $buildQuery = $buildQuery . $key . (is_array($item) ? implode(",", $item) : $item);
         }
         $stringToSign = $requestPath . $buildQuery;
 
@@ -70,7 +73,7 @@ class GuzzleRepository {
                 $response = $client->request('GET', $endpoint);
             }
             $content = $response->getBody()->getContents();
-            return resultFunction("", true, json_decode($content, true));
+            return resultFunction("", true, json_decode($content, true)['data']);
         } catch (\Exception $e) {
             if ($e->getCode() == 401) {
                 $tokpedTokenCache = $this->createTokenTokped();
