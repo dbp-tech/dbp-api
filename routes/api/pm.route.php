@@ -21,6 +21,10 @@ Route::group(['prefix' => 'pm', "middleware" => "checkCompayDocId"], function ()
         Route::get('/', [ProjectManagementController::class, 'indexCF']);
         Route::post('/', [ProjectManagementController::class, 'saveCF']);
         Route::delete('/{id?}/delete', [ProjectManagementController::class, 'deleteCF']);
+        Route::group(['prefix' => 'module'], function () {
+            Route::get('/', [ProjectManagementController::class, 'indexCFM']);
+            Route::post('/', [ProjectManagementController::class, 'saveCFM']);
+        });
     });
     Route::group(['prefix' => 'stage'], function () {
         Route::get('/', [ProjectManagementController::class, 'indexStage']);

@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Company;
 use App\Models\PmCustomField;
+use App\Models\PmCustomFieldModule;
 use App\Models\PmDeal;
 use App\Models\PmDealComment;
 use App\Models\PmDealCustomField;
@@ -14,6 +15,7 @@ use App\Models\PmPipelineUser;
 use App\Models\PmStage;
 use App\Models\PmType;
 use App\Models\PmTypeCustomField;
+use App\Models\SystemModule;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -303,7 +305,7 @@ class ProjectManagementRepository
 
     public function indexCF($filters, $companyId)
     {
-        $pmCF = PmCustomField::with([]);
+        $pmCF = PmCustomField::with(['pm_custom_field_modules.system_module']);
         $pmCF = $pmCF->where('company_id', $companyId);
         $pmCF = $pmCF->orderBy('id', 'desc')->paginate(25);
         return $pmCF;
@@ -941,6 +943,59 @@ class ProjectManagementRepository
             return resultFunction("Success to delete assign", true);
         } catch (\Exception $e) {
             return resultFunction("Err code PMR-Dpu catch: " . $e->getMessage());
+        }
+    }
+
+    public function indexCFM($filters, $companyId)
+    {
+        $pmCFM = PmCustomFieldModule::with(['pm_custom_field', 'system_module']);
+        $pmCFM = $pmCFM->where('company_id', $companyId);
+        $pmCFM = $pmCFM->orderBy('id', 'desc')->get();
+        return $pmCFM;
+    }
+
+    public function saveCFM($data, $companyId)
+    {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'pm_custom_field_id' => 'required',
+                'modules' => 'required',
+            ]);
+            if ($validator->fails()) return resultFunction('Err code PMR-SCFM: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code PMR-SCFM: company not found');
+
+            $pmCustomField = PmCustomField::find($data['pm_custom_field_id']);
+            if (!$pmCustomField) return resultFunction('Err code PMR-SCFM: custom field not found');
+
+            $systemModuleIds = array_column($data['modules'], 'system_module_id');
+            $systemModules = SystemModule::with([])
+                ->whereIn('id', $systemModuleIds)
+                ->get();
+            if (count($systemModuleIds) !== count($systemModules)) return resultFunction("Err code PMR-SCFM: the module is not match with param input");
+
+            $paramSave = [];
+            foreach ($data['modules'] as $item) {
+                $paramSave[] = [
+                    'company_id' => $company->id,
+                    'pm_custom_field_id' => $pmCustomField->id,
+                    'system_module_id' => $item['system_module_id'],
+                    'pm_details' => json_encode($item['details']),
+                    'createdAt' => date("Y-m-d H:i:s"),
+                    'updatedAt' => date("Y-m-d H:i:s")
+                ];
+            }
+
+            PmCustomFieldModule::where('pm_custom_field_id', $pmCustomField->id)->delete();
+
+            PmCustomFieldModule::insert($paramSave);
+
+            DB::commit();
+            return resultFunction("Success to create custom field module", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code PMR-SCFM catch: " . $e->getMessage());
         }
     }
 }

@@ -157,4 +157,15 @@ class ProjectManagementController extends Controller
     {
         return response()->json($this->pmRepo->deleteDpu($id, $request->header('company_id')));
     }
+
+    public function indexCFM(Request $request)
+    {
+        $filters = $request->only([]);
+        return response()->json($this->pmRepo->indexCFM($filters, $request->header('company_id')));
+    }
+
+    public function saveCFM(Request $request)
+    {
+        return response()->json($this->pmRepo->saveCFM($request->all(), $request->header('company_id')));
+    }
 }

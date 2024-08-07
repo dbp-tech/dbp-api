@@ -21,4 +21,8 @@ class PmCustomField extends Model
     public function getOptionDefaultAttribute($optDef) {
         return json_decode($optDef, true);
     }
+
+    public function pm_custom_field_modules() {
+        return $this->hasMany(PmCustomFieldModule::class, 'pm_custom_field_id', 'id');
+    }
 }
