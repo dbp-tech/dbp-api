@@ -654,7 +654,7 @@ class ProjectManagementRepository
                                     ->where('pm_deal_id', $pmDeal->id)
                                     ->where('pm_type_id', $custom_field->pm_type_id)
                                     ->where('pm_custom_field_id', $custom_field->pm_custom_field_id)
-                                    ->where('from', 'pipeline')
+                                    ->where('from', 'stage')
                                     ->first();
                                 $pmCustomFields = $this->setReturnCustomField($custom_field, $pmCustomFields, 'stage', $answer);
                             }
@@ -670,7 +670,7 @@ class ProjectManagementRepository
                             ->where('pm_deal_id', $pmDeal->id)
                             ->where('pm_type_id', $custom_field->pm_type_id)
                             ->where('pm_custom_field_id', $custom_field->pm_custom_field_id)
-                            ->where('from', 'pipeline')
+                            ->where('from', 'deal')
                             ->first();
                         $pmCustomFields = $this->setReturnCustomField($custom_field, $pmCustomFields, 'deal', $answer);
                     }
