@@ -15,7 +15,7 @@ class CheckoutFormBumpProduct extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'checkout_form_bump_products';
+    protected $table = 'ecom_checkout_form_bump_products';
     protected $guarded = [];
 
     public function product()

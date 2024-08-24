@@ -15,7 +15,7 @@ class CheckoutForm extends Model
     const UPDATED_AT = 'updatedAt';
     const DELETED_AT = 'deletedAt';
     
-    protected $table = 'checkout_forms';
+    protected $table = 'ecom_checkout_forms';
     protected $guarded = [];
 
     public function product()
