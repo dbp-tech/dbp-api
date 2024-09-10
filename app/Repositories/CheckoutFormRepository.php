@@ -27,6 +27,7 @@ class CheckoutFormRepository
             DB::beginTransaction();
             $validator = Validator::make($data, [
                 'product_id' => 'required',
+                'doc_id' => 'required',
             ]);
             if ($validator->fails()) return resultFunction('Err code CFR-S: validation err ' . $validator->errors());
 
@@ -34,25 +35,9 @@ class CheckoutFormRepository
             if (!$product) return resultFunction('Err code CFR-S: product not found');
 
             $cf = new CheckoutForm();
+            $cf->doc_id = $data['doc_id'];
             $cf->product_id = $data['product_id'];
             $cf->title = $data['title'];
-            $cf->template = json_encode($data['template']);
-            $cf->show_product_image = true;
-            $cf->guarantee_seals = json_encode($data['guarantee_seals']);
-            $cf->requested_fields = json_encode($data['requested_fields']);
-            $cf->is_dropship = $data['is_dropship'];
-            $cf->buy_button = json_encode($data['buy_button']);
-            $cf->video = $data['video'];
-            $cf->content = $data['content'];
-            $cf->coupon_field = $data['coupon_field'];
-            $cf->bullet_points = json_encode($data['bullet_points']);
-            $cf->template = json_encode($data['template']);
-            $cf->is_order_summary = $data['is_order_summary'];
-            $cf->testimonials = json_encode($data['testimonials']);
-            $cf->tracking = json_encode($data['tracking']);
-            $cf->headline_text = json_encode($data['headline_text']);
-            $cf->success_video = json_encode($data['success_video']);
-            $cf->bank_accounts = json_encode($data['bank_accounts']);
             $cf->save();
 
             if ($data['bump_products']) {
