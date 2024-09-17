@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\CheckoutForm;
 use App\Models\CheckoutFormBumpProduct;
+use App\Models\EcomProduct;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,7 @@ class CheckoutFormRepository
             ]);
             if ($validator->fails()) return resultFunction('Err code CFR-S: validation err ' . $validator->errors());
 
-            $product = Product::find($data['product_id']);
+            $product = EcomProduct::find($data['product_id']);
             if (!$product) return resultFunction('Err code CFR-S: product not found');
 
             $cf = new CheckoutForm();
@@ -41,7 +42,7 @@ class CheckoutFormRepository
             $cf->save();
 
             if (isset($data['bump_products'])) {
-                $productBp = Product::with([])
+                $productBp = EcomProduct::with([])
                     ->where("id", $data['bump_products']['product_id'])
                     ->first();
                 if (!$productBp) return resultFunction("Err code CFR-S: bump product not found");
