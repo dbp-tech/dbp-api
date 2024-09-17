@@ -40,7 +40,7 @@ class CheckoutFormRepository
             $cf->title = $data['title'];
             $cf->save();
 
-            if ($data['bump_products']) {
+            if (isset($data['bump_products'])) {
                 $productBp = Product::with([])
                     ->where("id", $data['bump_products']['product_id'])
                     ->first();
