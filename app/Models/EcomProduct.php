@@ -37,4 +37,8 @@ class EcomProduct extends Model
     public function ecom_product_store_many() {
         return $this->hasMany(EcomProductStore::class, 'product_id', 'id');
     }
+
+    public function ecom_checkout_forms() {
+        return $this->hasMany(CheckoutForm::class, 'product_id', 'id');
+    }
 }

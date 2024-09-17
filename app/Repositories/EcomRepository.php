@@ -175,7 +175,7 @@ class EcomRepository
     public function productIndex($filters, $companyId)
     {
         $ecomProduct = EcomProduct::with(['product_variants', 'product_category.ecom_product_category',
-            'ecom_product_store_many.store']);
+            'ecom_product_store_many.store', 'ecom_checkout_forms']);
         $ecomProduct = $ecomProduct->where('company_id', $companyId);
         $ecomProduct = $ecomProduct->orderBy('id', 'desc')->get();
         return $ecomProduct;
@@ -801,7 +801,7 @@ class EcomRepository
     }
 
     public function getProductOnly($storeId, $companyId) {
-        $products = EcomProduct::with(['ecom_product_stores'])
+        $products = EcomProduct::with(['ecom_product_stores', 'ecom_checkout_forms'])
             ->whereDoesntHave('ecom_product_stores', function ($q) use ($storeId) {
                 $q->where('store_id', $storeId);
             })
