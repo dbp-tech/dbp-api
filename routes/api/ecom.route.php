@@ -13,6 +13,7 @@ Route::group(['prefix' => 'ecom', "middleware" => "checkCompayDocId"], function 
         Route::post('/marketplace-product', [EcomController::class, 'storeMarketplaceProduct']);
         Route::get('/{id?}/marketplace-order', [EcomController::class, 'marketplaceOrder']);
         Route::get('/{orderId?}/marketplace-order-detail', [EcomController::class, 'marketplaceOrderDetail']);
+        
     });
     Route::group(['prefix' => 'category'], function () {
         Route::post('/', [EcomController::class, 'categorySave']);
@@ -27,4 +28,17 @@ Route::group(['prefix' => 'ecom', "middleware" => "checkCompayDocId"], function 
         Route::post('/post-product/only', [EcomController::class, 'setProductOnly']);
         Route::delete('/{id?}/delete-product', [EcomController::class, 'deleteProductOnly']);
     }); 
+    Route::group(['prefix' => 'inquiry'], function () {
+        Route::post('/', [EcomController::class, 'inquirySave']);
+        Route::get('/detail', [EcomController::class, 'inquiryDetail']);
+    });
+    Route::group(['prefix' => 'master-status'], function () {
+        Route::get('/', [EcomController::class, 'masterStatusIndex']);
+        Route::post('/change-status', [EcomController::class, 'masterStatusChangeStatus']);
+        Route::delete('/{id}/delete-status', [EcomController::class, 'masterStatusDeleteStatus']);
+    });
+    Route::group(['prefix' => 'master-followup'], function () {
+        Route::get('/', [EcomController::class, 'masterFollowupIndex']);
+        Route::put('/{id}/update', [EcomController::class, 'masterFollowupUpdate']);
+    });
 });

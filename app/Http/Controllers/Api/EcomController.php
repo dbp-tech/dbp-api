@@ -102,4 +102,39 @@ class EcomController extends Controller
     {
         return response()->json($this->ecomRepo->marketplaceOrderDetail($orderId, $request->header('company_id')));
     }
+
+    public function inquirySave(Request $request)
+    {
+        return response()->json($this->ecomRepo->inquirySave($request->all(), $request->header('company_id')));
+    }
+
+    public function inquiryDetail(Request $request)
+    {
+        return response()->json($this->ecomRepo->inquiryDetail($request->header('company_id')));
+    }
+
+    public function masterStatusIndex(Request $request)
+    {
+        return response()->json($this->ecomRepo->masterStatusIndex($request->header('company_id')));
+    }
+
+    public function masterStatusChangeStatus(Request $request)
+    {
+        return response()->json($this->ecomRepo->masterStatusChangeStatus($request->all(), $request->header('company_id')));
+    }
+
+    public function masterStatusDeleteStatus(Request $request, $id)
+    {
+        return response()->json($this->ecomRepo->masterStatusDeleteStatus($id, $request->header('company_id')));
+    }
+
+    public function masterFollowupIndex(Request $request)
+    {
+        return response()->json($this->ecomRepo->masterFollowupIndex($request->header('company_id')));
+    }
+
+    public function masterFollowupUpdate(Request $request, $id)
+    {
+        return response()->json($this->ecomRepo->masterFollowupUpdate($id, $request->all(), $request->header('company_id')));
+    }
 }

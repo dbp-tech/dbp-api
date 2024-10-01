@@ -3,6 +3,10 @@
 namespace App\Repositories;
 
 use App\Models\Company;
+use App\Models\EcomInquiry;
+use App\Models\EcomMasterFollowUp;
+use App\Models\EcomMasterStatus;
+use App\Models\EcomMasterStatusSub;
 use App\Models\EcomProduct;
 use App\Models\EcomProductCategory;
 use App\Models\EcomProductCategoryMapping;
@@ -296,7 +300,9 @@ class EcomRepository
     public function storeSave($data, $companyId)
     {
         try {
+            DB::beginTransaction();
             $validator = Validator::make($data, [
+                'store_id' => 'required',
                 'store_type' => 'required',
                 'is_active' => 'required',
                 'type_logo' => 'required',
@@ -324,6 +330,20 @@ class EcomRepository
             }
             $ocStore->save();
 
+            // Check if creating one
+            if (!$data['id']) {
+                // Get all store
+                $isOnlyOne = OcStore::with([])
+                    ->where("company_id", $company->id)
+                    ->get();
+                // Check the store data is one means it is new one
+                if (count($isOnlyOne) == 1) {
+                    // Add status and follow up data
+                    $this->storeMasterStatusDefault($companyId);
+                }
+            }
+
+            DB::commit();
             return resultFunction("Success to create store", true, $ocStore);
         } catch (\Exception $e) {
             return resultFunction("Err code ER-SS catch: " . $e->getMessage());
@@ -935,6 +955,211 @@ class EcomRepository
             return resultFunction("", true, $ocOrder);
         } catch (\Exception $e) {
             return resultFunction("Err code ER-MO catch: " . $e->getMessage());
+        }
+    }
+
+    public function inquirySave($data, $companyId) {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'account_number' => 'required',
+                'account_bank' => 'required',
+                'account_holder_name' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code ER-IS: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-IS: company not found');
+
+            $ecomInquiry = EcomInquiry::with([])
+                ->where('company_id', $company->id)
+                ->first();
+            if(!$ecomInquiry) {
+                $ecomInquiry = new EcomInquiry();
+                $ecomInquiry->company_id = $company->id;
+            }
+            $ecomInquiry->account_number = $data['account_number'];
+            $ecomInquiry->account_bank = $data['account_bank'];
+            $ecomInquiry->account_holder_name = $data['account_holder_name'];
+            $ecomInquiry->save();
+
+            DB::commit();
+            return resultFunction("Success to save it", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-IS: catch " . $e->getMessage());
+        }
+    }
+
+    public function inquiryDetail($companyId) {
+        try {
+            $ecomInquiry = EcomInquiry::with([])
+                ->where('company_id', $companyId)
+                ->first();
+            if (!$ecomInquiry) return resultFunction("Err code ER-ID: inquiry data not found");
+
+            return resultFunction("", true, $ecomInquiry);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-ID catch: " . $e->getMessage());
+        }
+    }
+
+    public function storeMasterStatusDefault($companyId) {
+        try {
+            DB::beginTransaction();
+
+            // Remove all previous statuses
+            EcomMasterStatusSub::where('company_id', $companyId)->delete();
+            EcomMasterFollowUp::where('company_id', $companyId)->delete();
+
+            // Get all default master status
+            $ecomMasterStatuses = EcomMasterStatus::all();
+
+            // Map data to input variable
+            $ecomMasterStatusSubs = [];
+            foreach ($ecomMasterStatuses as $ecomMS) {
+                $sort = 1;
+                foreach ($ecomMS->sub_statuses as $subStatus) {
+                    $ecomMasterStatusSubs[] = [
+                        "company_id" => $companyId,
+                        "ecom_master_status_id" => $ecomMS->id,
+                        "title" => $subStatus,
+                        "sort" => $sort,
+                        "createdAt" => date("Y-m-d H:i:s"),
+                        "updatedAt" => date("Y-m-d H:i:s")
+                    ];
+                    $sort++;
+                }
+            }
+
+            // Save it to database
+            // EcomMasterStatusSub::insert($ecomMasterStatusSubs);
+
+            // Get default data from helpers
+            $followUpData = defaultFollowUpEcommerce();
+
+            // Map data to input variable
+            $ecomMFInput = [];
+            foreach ($followUpData as $fd) {
+                $ecomMFInput[] = [
+                    "company_id" => $companyId,
+                    "key" => $fd['key'],
+                    "value_of_key" => $fd['value'],
+                    "default_text" => $fd['defaultText'],
+                    "current_text" => $fd['currentText'],
+                    "createdAt" => date("Y-m-d H:i:s"),
+                    "updatedAt" => date("Y-m-d H:i:s")
+                ];
+            }
+
+            // Save it to database
+            EcomMasterFollowUp::insert($ecomMFInput);
+
+            DB::commit();
+            return resultFunction("", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-SMSD catch: " . $e->getMessage());
+        }
+    }
+
+    public function masterStatusIndex($companyId) {
+        try {
+            $ecomMasterStatuses = EcomMasterStatus::with(['ecom_master_status_subs' => function ($query) use ($companyId) {
+                $query->where('company_id', '=', $companyId);
+            }])->get();
+
+            return resultFunction("", true, $ecomMasterStatuses);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-ID catch: " . $e->getMessage());
+        }
+    }
+
+    public function masterStatusChangeStatus($data, $companyId) {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'master_status_id' => 'required',
+                'title' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code ER-MSCS: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-MSCS: company not found');
+
+            $ecomMasterStatus = EcomMasterStatus::find($data['master_status_id']);
+            if (!$ecomMasterStatus) return resultFunction('Err code ER-MSCS: master status not found');
+
+            if (!isset($data['master_status_sub_id'])) {
+                $ecomMasterStatusSub = new EcomMasterStatusSub();
+                $ecomMasterStatusSub->company_id = $companyId;
+                $ecomMasterStatusSub->ecom_master_status_id = $data['master_status_id'];
+            } else {
+                $ecomMasterStatusSub = EcomMasterStatusSub::find($data['master_status_sub_id']);
+                if (!$ecomMasterStatus) return resultFunction('Err code ER-MSCS: master status not found');
+            }
+
+            $ecomMasterStatusSub->title = $data['title'];
+            $ecomMasterStatusSub->save();
+
+            DB::commit();
+            return resultFunction("Success to save it", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-MSCS: catch " . $e->getMessage());
+        }
+    }
+
+    public function masterStatusDeleteStatus($id, $companyId) {
+        try {
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-MSCS: company not found');
+
+            $ecomMasterStatusSub = EcomMasterStatusSub::find($id);
+            if (!$ecomMasterStatusSub) return resultFunction('Err code ER-MSCS: master status not found');
+
+            if ($ecomMasterStatusSub->company_id != $companyId)  return resultFunction('Err code ER-MSCS: master status sub is not belongs to you');
+
+            $ecomMasterStatusSub->delete();
+
+            return resultFunction("Success to save it", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-MSCS: catch " . $e->getMessage());
+        }
+    }
+
+    public function masterFollowupIndex($companyId) {
+        try {
+            $ecomMasterFollowups = EcomMasterFollowUp::with([])
+                ->where('company_id', $companyId)
+                ->get();
+
+            return resultFunction("", true, $ecomMasterFollowups);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-MFI catch: " . $e->getMessage());
+        }
+    }
+
+    public function masterFollowupUpdate($id, $data, $companyId) {
+        try {
+            DB::beginTransaction();
+            $validator = Validator::make($data, [
+                'current_text' => 'required'
+            ]);
+            if ($validator->fails()) return resultFunction('Err code ER-MFU: validation err ' . $validator->errors());
+
+            $company = Company::find($companyId);
+            if (!$company) return resultFunction('Err code ER-MFU: company not found');
+
+            $masterFollowup = EcomMasterFollowUp::find($id);
+            if (!$masterFollowup) return resultFunction('Err code ER-MFU: master follow up not found');
+            
+            if ($masterFollowup->company_id != $companyId) return resultFunction('Err code ER-MFU: master follow up is invalid');
+
+            $masterFollowup->current_text = $data['current_text'];
+            $masterFollowup->save();
+
+            DB::commit();
+            return resultFunction("Success to save it", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-MFU: catch " . $e->getMessage());
         }
     }
 }
