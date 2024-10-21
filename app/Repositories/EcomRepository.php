@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Company;
+use App\Models\Customer;
 use App\Models\EcomInquiry;
 use App\Models\EcomMasterFollowUp;
 use App\Models\EcomMasterStatus;
@@ -21,8 +22,10 @@ use App\Models\OcPaymentDetail;
 use App\Models\OcShippingDetail;
 use App\Models\OcStatus;
 use App\Models\OcStore;
+use DateTime;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EcomRepository
 {
@@ -1160,6 +1163,327 @@ class EcomRepository
             return resultFunction("Success to save it", true);
         } catch (\Exception $e) {
             return resultFunction("Err code ER-MFU: catch " . $e->getMessage());
+        }
+    }
+
+    public function uploadOrderFromOo($request) {
+        try {
+            DB::beginTransaction();
+
+            $dataInput = $this->_reformatDataFromInput($request);
+            if (count($dataInput) == 0) return resultFunction("Err code ER-UO: empty data");
+
+            if (count($dataInput) > 500) return resultFunction("Err code ER-UO: maximum data is 500 rows");
+
+            $companyId = $request->header('company_id');
+
+            $ecomMasterSubs = $this->_checkStatusListIsExist($dataInput, $companyId);
+            if (!$ecomMasterSubs['status']) return $ecomMasterSubs;
+
+            $customers = $this->_checkCustomerIsExist($dataInput, $companyId);
+            if (!$customers['status']) return $customers;
+
+            $initId = 1;
+            $ocOrderLast = OcOrder::with([])
+                ->orderBy('id', 'desc')
+                ->first();
+            if ($ocOrderLast) $initId = $ocOrderLast->id + 1;
+
+            $ocOrderSave = [];
+            $ocOrderItemSave = [];
+            $ocCustomerSave = [];
+            $ocInvoiceSave = [];
+            $ocPaymentDetailSave = [];
+            $ocShippingDetailSave = [];
+            $ocStatusSave = [];
+            foreach ($dataInput as $dI) {
+                $dI['gross_revenue'] = str_replace(['Rp', '.'], '', $dI['gross_revenue']);
+                $dI['cogs'] = str_replace(['Rp', '.'], '', $dI['cogs']);
+                $dI['shipping_cost'] = str_replace(['Rp', '.'], '', $dI['shipping_cost']);
+                $dI['original_shipping_cost'] = str_replace(['Rp', '.'], '', $dI['original_shipping_cost']);
+                $dI['other_cost'] = str_replace(['Rp', '.'], '', $dI['other_cost']);
+                $dI['net_revenue'] = str_replace(['Rp', '.'], '', $dI['net_revenue']);
+
+                // bikin api buat konekin status permodul oo. tokped
+                // buat download excel, ambil semua product ditable, create kalau gak ada.
+
+                $customerId = 1;
+                $filteredArray = array_filter($customers['data'], function($item) use ($dI) {
+                    return $item['phone'] == $dI['phone'];
+                });
+                if (count($filteredArray) > 0) {
+                    $filData = reset($filteredArray);
+                    $customerId = $filData['id'];
+                }
+
+                $order = $this->_setOcOrders($dI, $initId, $customerId, $ecomMasterSubs['data']);
+                $ocOrderSave[] = $order;
+
+                $orderItem = $this->_setOcOrderItems($dI, $initId);
+                $ocOrderItemSave[] = $orderItem;
+
+                $customer = $this->_setOcCustomer($dI, $customerId, $ocCustomerSave);
+                if ($customer['status']) {
+                    $ocCustomerSave[] = $customer['data'];
+                }
+
+                $invoice = $this->_setOcInvoice($dI, $initId);
+                $ocInvoiceSave[] = $invoice;
+
+                $paymentDetail = $this->_setOcPaymentDetail($dI, $initId);
+                $ocPaymentDetailSave[] = $paymentDetail;
+
+                $shippingDetail = $this->_setOcShippingDetail($dI, $initId);
+                $ocShippingDetailSave[] = $shippingDetail;
+
+                $status = $this->_setOcStatus($dI, $initId);
+                $ocStatusSave[] = $status;
+
+                $initId = $initId + 1;
+            }
+
+            OcOrder::insert($ocOrderSave);
+            OcOrderItem::insert($ocOrderItemSave);
+            OcCustomer::insert($ocCustomerSave);
+            OcInvoice::insert($ocInvoiceSave);
+            OcPaymentDetail::insert($ocPaymentDetailSave);
+            OcShippingDetail::insert($ocShippingDetailSave);
+            OcStatus::insert($ocStatusSave);
+
+            // DB::commit();
+            return resultFunction("Success uploaded", true);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-UOF: catch " . $e->getMessage());
+        }
+    }
+
+    private function _checkCustomerIsExist($dataInput, $companyId) {
+        try {
+            $phones = array_unique(array_column($dataInput, 'phone'));
+            if (count($phones) == 0) return resultFunction("Err code ER-CCI: phone not found at the uploaded file");
+
+            $customers = Customer::with([])
+                ->where('company_id', $companyId)
+                ->whereIn('phone', $phones)
+                ->get();
+
+            $phoneDb = array_column($customers->toArray(), 'phone');
+            $phoneNotExistInDb = array_diff($phones, $phoneDb);
+
+            if (count($phoneNotExistInDb) == 0) return resultFunction("", true, $customers->toArray());
+
+            $lastCustomer = Customer::with([])
+                ->orderBy('id', 'desc')
+                ->first();
+            $lastCustomerId = 1;
+            if ($lastCustomer) $lastCustomerId = $lastCustomer->id + 20;
+
+            $customerSaveBulk = [];
+            foreach ($dataInput as $inputItem) {
+                if (in_array($inputItem['phone'], $phoneNotExistInDb)) {
+                    $customerSaveBulk[] = [
+                        "id" => $lastCustomerId,
+                        "company_id" => $companyId,
+                        "uuid" => null,
+                        "name" => $inputItem['name'],
+                        "email" => $inputItem['email'] ?? '',
+                        "phone" => (string) $inputItem['phone'],
+                        'createdAt' => date("Y-m-d H:i:s"),
+                        'updatedAt' => date("Y-m-d H:i:s"),
+                        "deletedAt" => null
+                    ];
+
+                    $lastCustomerId = $lastCustomerId + 1;
+                }
+            }
+
+            Customer::insert($customerSaveBulk);
+
+            $results = array_merge($customers->toArray(), $customerSaveBulk);
+            return resultFunction("", true, $results);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-CCI: catch " . $e->getMessage());
+        }
+    }
+
+    private function _checkStatusListIsExist($dataInput, $companyId) {
+        try {
+            $statuses = array_unique(array_column($dataInput, 'status'));
+            if (count($statuses) == 0) return resultFunction("Err code ER-CSL: statuses not found from file");
+
+            $ecomMasterStatusSubs = EcomMasterStatusSub::with(['ecom_master_status'])
+                ->where("company_id", $companyId)
+                ->whereIn("title", $statuses)
+                ->get();
+            if (count($ecomMasterStatusSubs) == 0) return resultFunction("Err code ER-CSL: status not found from your data");
+
+            if (count($statuses) != count($ecomMasterStatusSubs)) return resultFunction("Err code ER-CSL: your status not match between uploaded file and database");
+
+            return resultFunction("", true, $ecomMasterStatusSubs);
+        } catch (\Exception $e) {
+            return resultFunction("Err code ER-CSL: catch " . $e->getMessage());
+        }
+    }
+
+    private function _setOcStatus($data, $initId) {
+        return [
+            "order_id" => $initId,
+            "status_type" => null,
+            "status_code" => null,
+            "status_message" => null,
+            "order_status" => $data['status'],
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _setOcShippingDetail($data, $initId) {
+        return [
+            "shipping_id" => $data['order_id'],
+            "order_id" => $initId,
+            "recipient_name" => $data['name'],
+            "phone" => $data['phone'],
+            "address_full" => $data['address'],
+            "city" => $data['city'],
+            "province" => $data['province'],
+            "postal_code" => $data['zip'],
+            "country" => "IDR",
+            "geo" => "",
+            "shipping_agency" => $data['courier'],
+            "service_type" => $data['courier'],
+            "accept_deadline" => null,
+            "confirm_shipping_deadline" => null,
+            "shipping_details" => null,
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _setOcPaymentDetail($data, $initId) {
+        $i = 0;
+        $amountDetail = [
+            "product_price" => $data['product_price'],
+            "cogs" => $data['cogs'],
+            "discount" => $data['discount'],
+            "product_price" => $data['product_price'],
+            "bump_price" => $data['bump_price'],
+            "shipping_cost" => $data['shipping_cost'],
+            "original_shipping_cost" => $data['original_shipping_cost'],
+            "cod_cost" => $data['cod_cost'],
+            "shipping_markup" => $data['shipping_markup'],
+            "other_cost" => $data['other_cost'],
+            "gross_revenue" => $data['gross_revenue'],
+            "net_revenue" => $data['net_revenue'],
+        ];
+        $paidAt = null;
+        if ($data['paid_at_string']) {
+            $dateString = $data['paid_at_string'];
+            // Hapus tanda hubung yang tidak diperlukan
+            $dateString = str_replace(' - ', ' ', $dateString);
+
+            // Ubah menjadi objek DateTime
+            $date = DateTime::createFromFormat('d-m-Y H:i', $dateString);
+
+            // Ubah ke format MySQL (Y-m-d H:i:s)
+            $paidAt = $date->format('Y-m-d H:i:s');
+        }
+        return [
+            "payment_id" => $data['order_id'],
+            "order_id" => $initId,
+            "payment_method" => $data['payment_method'],
+            "payment_date" => $paidAt,
+            "total_amount" => $data['gross_revenue'],
+            "currency" => "IDR",
+            "amount_details" => json_encode($amountDetail),
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _setOcInvoice($data, $initId) {
+        return [
+            "invoice_id" => $data['order_id'], 
+            "order_id" => $initId,
+            "payment_id" => $data['order_id'],
+            "total_amount" => $data['gross_revenue'],
+            "currency" => "IDR",
+            "voucher_code" => "",
+            "voucher_type" => "",
+            "voucher_amount" => 0,
+            "voucher_details" => null,
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _setOcCustomer($data, $customerId, $ocCustomerSave) {
+        $filteredArray = array_filter($ocCustomerSave, function($item) use ($customerId) {
+            return $item['customer_id'] == $customerId;
+        });
+        if (count($filteredArray) > 0) {
+            return resultFunction("");
+        }
+        return resultFunction("", true, [
+            "customer_id" => $customerId,
+            "crm_contact_id" => null, // crm_contact_id bagaimana?
+            "store_id" => $data['store_id'],
+            "name" => $data['name'] ?? "",
+            "email" => $data['email'] ?? "",
+            "phone" => $data['phone'],
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ]);
+    }
+    
+    private function _setOcOrderItems($data, $initId) {
+        return [
+            "order_item_id" => $data['product_id'],
+            "order_id" => $initId,
+            "product_id" => $data['product_id'],
+            "product_name" => $data['product'],
+            "product_image_url" => "", 
+            "product_sku" => "",
+            "product_details" => null,
+            "price" => $data['product_price'], // apa price disini udah per pieces atau udah total
+            "discount" => $data['discount'],
+            "final_price" => $data['product_price'] * $data['quantity'],
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _setOcOrders($data, $initId, $customerId, $statusSubs) {
+        $selectedStatus = $statusSubs->where('title', $data['status'])->first();
+        return [
+            "id" => $initId,
+            "order_id" => $data['order_id'],
+            "store_id" => $data['store_id'], 
+            "customer_id" => $customerId,
+            "invoice_id" => $data['order_id'],
+            "order_status" => $selectedStatus->ecom_master_status->title,
+            "createdAt" => date("Y-m-d H:i:s"),
+            "updatedAt" => date("Y-m-d H:i:s")
+        ];
+    }
+
+    private function _reformatDataFromInput($request) {
+        try {
+            $data = Excel::toArray([], $request->file("file"));
+            $resultData = [];
+            foreach ($data[0] as $key => $item) {
+                if ($key > 0) {
+                    $inputItem = [];
+                    foreach ($item as $keyIt => $dI) {
+                        if ($data[0][0][$keyIt]) {
+                            $inputItem[$data[0][0][$keyIt]] = $dI;
+                        }
+                    }
+                    $resultData[] = $inputItem;
+                }
+            }
+            return $resultData;
+        } catch (\Exception $e) {
+            return [];
         }
     }
 }

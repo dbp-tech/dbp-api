@@ -40,6 +40,7 @@ Route::group(['prefix' => 'ecom', "middleware" => "checkCompayDocId"], function 
     Route::group(['prefix' => 'master-followup'], function () {
         Route::get('/', [EcomController::class, 'masterFollowupIndex']);
         Route::put('/{id}/update', [EcomController::class, 'masterFollowupUpdate']);
-        
     });
+    Route::post("/upload-order-from-oo", [EcomController::class, 'uploadOrderFromOo']);
 });
+Route::get("/ecom/download-product-list", [EcomController::class, 'downloadProductList']);
